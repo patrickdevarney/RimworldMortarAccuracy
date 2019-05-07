@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--SPANISH-->
+<LanguageData>
+	<MortarAccuracy>Precisión del Mortero</MortarAccuracy>
+	<OptionWeather>El clima afecta la precisión</OptionWeather>
+	<OptionSkills>Selecciona qué habilidad(s) afecta la precisión. Si se seleccionan múltiples habilidades, se promedian juntas.</OptionSkills>
+	<OptionSkillIntellectual>La habilidad intelectual afecta a la precisión</OptionSkillIntellectual>
+	<OptionSkillShooting>La habilidad tiro afecta a la precisión</OptionSkillShooting>
+	<OptionBestAccuracy>Mejor precision\nLos peones con la máxima habilidad tienen su precisión de mortero mejorada a {0}% (la vainilla es 0%, el valor predeterminado del modo es 75%, la precisión perfecta es 100%)</OptionBestAccuracy>
+	<OptionWorstAccuracy>Peor precision\nLos peones sin habilidad tienen su precisión de mortero {0} en {1}% (la vainilla es 0%, el valor predeterminado de mod es -40%)</OptionWorstAccuracy>
+	<Improved>mejorado</Improved>
+	<Reduced>reducido</Reduced>
+	
+	<OptionCover>La cubierta reduce la precisión</OptionCover>
+	<OptionLeadTarget>Permitir que los colonos lideren sus objetivos</OptionLeadTarget>
+</LanguageData>

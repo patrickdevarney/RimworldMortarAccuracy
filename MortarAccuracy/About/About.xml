@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+<name>Mortar Accuracy</name>
+<author>Hob Took</author>
+<targetVersion>1.0.0</targetVersion>
+<description>Instead of mortars having a fixed spread radius of 13 tiles and having a miss chance due to cover, the cover miss chance is removed and a colonist's Intellectual and/or Shooting skill will affect a mortar's accuracy.
+
+By default, a colonist with maximum skill will improve a mortar's accuracy to 75%. A colonist with no skill will affect a mortar's accuracy by -40%. These values can be changed in Mod Settings (can set everyone's accuracy to perfect 100% accuracy if desired)
+
+This affects all mortar shots, including enemy mortars.
+
+Supports other mods:
+[WD] Expanded Artillery: mortars and cannons accuracy is affected by this mod
+More Vanilla Turrets: rocket and charge blast turret accuracy is affected by this mod
+
+Load order does not matter to affect either of these mods.
+</description>
+</ModMetaData>
