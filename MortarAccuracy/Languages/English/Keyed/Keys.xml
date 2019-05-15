@@ -10,6 +10,7 @@
 	<OptionWorstAccuracy>Worst accuracy\nPawns with no skill have their mortar accuracy {0} by {1}% (vanilla is 0%, mod default is -40%)</OptionWorstAccuracy>
 	<Improved>improved</Improved>
 	<Reduced>reduced</Reduced>
+	<OptionShowAccuracy>Show accuracy radius instead of blast radius</OptionShowAccuracy>
 	
 	<OptionCover>Cover reduces accuracy</OptionCover>
 	<OptionLeadTarget>Allow colonists to lead their targets</OptionLeadTarget>

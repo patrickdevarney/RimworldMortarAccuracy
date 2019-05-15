@@ -9,6 +9,7 @@
 	<OptionWorstAccuracy>Наихудшая точность\nТочность стрельбы из минометов пешки без навыка {0} на {1}%\n(значение без мода равно 0%, значение мода по умолчанию равно -40%)</OptionWorstAccuracy>
 	<Improved>увеличена</Improved>
 	<Reduced>уменьшена</Reduced>
+	<OptionShowAccuracy>Показывать радиус точности вместо радиуса взрыва</OptionShowAccuracy>
 	
 	<OptionCover>Укрытия уменьшают точность</OptionCover>
 	<OptionLeadTarget>Позволить колонистам корректировать огонь по движущейся цели</OptionLeadTarget>
