@@ -14,4 +14,5 @@
 	
 	<OptionCover>Cover reduces accuracy</OptionCover>
 	<OptionLeadTarget>Allow colonists to lead their targets</OptionLeadTarget>
+	<OptionTargetLeading>Automatically lead moving targets</OptionTargetLeading>
 </LanguageData>
