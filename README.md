@@ -10,7 +10,7 @@ Launch Rimworld, enable Mortar Accuracy in mod menu. Can access more settings in
 
 ### Description
 A collection of options to make mortars more/less accurate. Customizable in the Mod Settings menu. These changes affect all mortar shots, including enemy mortars. Changes include:
-* **Lead moving targets!
+* **Lead moving targets!**
 * **Weather:** Mortar accuracy is affected by weather and time of day (in vanilla, mortar shots rarely are affected by weather)
 * **Colonist Skill:** Mortar accuracy is affected by colonist Intellectual and/or Shooting skill (in vanilla, skill makes no difference)
 * **Cover Miss Chance Removed:** Mortars no longer have a chance to miss due to cover surrounding the target (in vanilla, target's cover causes missed shots)
