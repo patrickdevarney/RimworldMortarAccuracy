@@ -13,12 +13,33 @@ namespace MortarAccuracy
                 return base.HighlightFieldRadiusAroundTarget(out needLOSToCenter);
 
             needLOSToCenter = false;
-            float missRadiusForShot = base.verbProps.forcedMissRadius;
-            float skillMultiplier = 1f;
-            CompMannable compMannable = base.caster.TryGetComp<CompMannable>();
-            if (compMannable != null)
+            float missRadius = GetAdjustedForcedMissRadius();
+            if (missRadius < 1)
+                missRadius = 1f;
+            return missRadius;
+        }
+
+        protected override bool TryCastShot()
+        {
+            //bool flag = base.TryCastShot();
+            bool flag = FireProjectile();
+            if (flag && base.CasterIsPawn)
             {
-                if (compMannable.ManningPawn != null)
+                base.CasterPawn.records.Increment(RecordDefOf.ShotsFired);
+            }
+            return flag;
+        }
+
+        float GetAdjustedForcedMissRadius()
+        {
+            if (base.verbProps.forcedMissRadius > 0.5f)
+            {
+                CompMannable compMannable = base.caster.TryGetComp<CompMannable>();
+                // Grab default forced miss radius for this particular weapon
+                float missRadiusForShot = base.verbProps.forcedMissRadius;
+                float skillMultiplier = 1f;
+                // We want to multiply this forced miss radius by our pawn's skill modifier
+                if (compMannable != null && compMannable.ManningPawn != null && compMannable.ManningPawn.skills != null)
                 {
                     int totalSkill = 0;
                     int skillsTotaled = 0;
@@ -40,32 +61,23 @@ namespace MortarAccuracy
                         skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
                     }
                 }
-            }
 
-            // Weather should affect shot no matter what the skill is
-            if (Settings.weatherAffectsMortarAccuracy)
-                missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
+                // Weather should affect shot no matter what the skill is
+                if (Settings.weatherAffectsMortarAccuracy)
+                    missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
+                else
+                    missRadiusForShot = (missRadiusForShot * skillMultiplier);
+
+                return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, base.currentTarget.Cell - base.caster.Position);
+            }
             else
-                missRadiusForShot = (missRadiusForShot * skillMultiplier);
-
-
-            return missRadiusForShot;
-        }
-
-        protected override bool TryCastShot()
-        {
-            //bool flag = base.TryCastShot();
-            bool flag = DoThing();
-            if (flag && base.CasterIsPawn)
             {
-                base.CasterPawn.records.Increment(RecordDefOf.ShotsFired);
+                return 0;
             }
-            return flag;
         }
 
-        public bool DoThing()
+        public bool FireProjectile()
         {
-            //Log.Message("Thing");
             if (base.currentTarget.HasThing && base.currentTarget.Thing.Map != base.caster.Map)
             {
                 return false;
@@ -96,70 +108,100 @@ namespace MortarAccuracy
             {
                 launcher = compMannable.ManningPawn;
                 equipment = base.caster;
+                // Earn skills
+                if (compMannable.ManningPawn.skills != null)
+                {
+                    int skillsAffectingAccuracy = 0;
+                    if (Settings.intellectualAffectsMortarAccuracy)
+                        skillsAffectingAccuracy++;
+                    if (Settings.shootingAffectsMortarAccuracy)
+                        skillsAffectingAccuracy++;
+
+                    float skillXP = verbProps.AdjustedFullCycleTime(this, CasterPawn) * 100;
+                    skillXP /= skillsAffectingAccuracy;
+
+                    if (Settings.intellectualAffectsMortarAccuracy)
+                        compMannable.ManningPawn.skills.Learn(SkillDefOf.Intellectual, skillXP, false);
+                    if (Settings.shootingAffectsMortarAccuracy)
+                        compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
+                }
             }
             Vector3 drawPos = base.caster.DrawPos;
             Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, base.caster.Map, WipeMode.Vanish);
 
-            // TODO: add target leading
-            if (currentTarget.Thing != null)
+            // If targetting a pawn
+            if (Settings.targetLeading)
             {
-                if (currentTarget.Thing is Pawn targetPawn)
+                if (currentTarget != null && currentTarget.Thing != null && currentTarget.Thing is Pawn targetPawn && targetPawn.pather.curPath != null)
                 {
-                    List<IntVec3> nodes = targetPawn.pather.curPath.NodesReversed;
+                    List<IntVec3> nodes = new List<IntVec3>(targetPawn.pather.curPath.NodesReversed);
+                    nodes.Reverse();
+                    // Purge outdated nodes from list
+                    for (int i = 0; i < nodes.Count; i++)
+                    {
+                        if (nodes[i] == targetPawn.Position)
+                        {
+                            // Remove all previous nodes
+                            nodes.RemoveRange(0, i);
+                            //Log.Message("Removed " + i + " entries. First node is now " + nodes[0].ToString());
+                            break;
+                        }
+                    }
                     // Path of target pawn from current to destination
                     // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
-                    float targetMoveSpeed = 0f;
+                    float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
                     float projectileMoveSpeed = projectile.projectile.speed;
+
+                    // Estimate position target will be in after this amount of time
+                    IntVec3 bestTarget = targetPawn.Position;
+                    float bestTimeOffset = float.MaxValue;
+                    //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
+                    float accumulatedTargetTime = 0f;
+
+                    IntVec3 previousPosition = targetPawn.Position;
+                    foreach (IntVec3 pathPosition in nodes)
+                    {
+                        float projectileDistanceFromTarget = (pathPosition - caster.Position).LengthHorizontal;
+                        float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
+
+                        //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
+                        //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
+
+                        float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
+                        float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
+                        accumulatedTargetTime += timeForPawnToReachPositionFromLastPosition;
+
+                        float timeOffset = Mathf.Abs(timeForProjectileToReachPosition - accumulatedTargetTime);
+                        if (timeOffset < bestTimeOffset)
+                        {
+                            bestTarget = pathPosition;
+                            bestTimeOffset = timeOffset;
+                            //Log.Message("Position " + pathPosition.ToString() + " is better. Time offset is " + timeOffset);
+                        }
+                        else
+                        {
+                            //Log.Message("Position " + pathPosition.ToString() + " is not better. Time offset is " + timeOffset);
+                        }
+
+                        previousPosition = pathPosition;
+                    }
+                    //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
+                    currentTarget = new LocalTargetInfo(bestTarget);
                 }
             }
 
             if (base.verbProps.forcedMissRadius > 0.5f)
             {
-                // Grab default forced miss radius for this particular weapon
-                float missRadiusForShot = base.verbProps.forcedMissRadius;
-                float skillMultiplier = 1f;
-                // We want to multiply this forced miss radius by our pawn's skill modifier
-                if (compMannable != null)
+                float adjustedForcedMissRadius = GetAdjustedForcedMissRadius();
+                ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
+                IntVec3 c = currentTarget.Cell;
+                if (adjustedForcedMissRadius > 0.5f)
                 {
-                    if (compMannable.ManningPawn != null)
-                    {
-                        int totalSkill = 0;
-                        int skillsTotaled = 0;
-                        if (Settings.intellectualAffectsMortarAccuracy)
-                        {
-                            totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Intellectual).Level;
-                            skillsTotaled++;
-                        }
-                        if (Settings.shootingAffectsMortarAccuracy)
-                        {
-                            totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Shooting).Level;
-                            skillsTotaled++;
-                        }
-
-                        if (skillsTotaled > 0)
-                        {
-                            // get average skill
-                            int averageSkill = (int)(((float)totalSkill) / skillsTotaled);
-                            skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
-                        }
-                    }
-                }
-
-                // Weather should affect shot no matter what the skill is
-                if (Settings.weatherAffectsMortarAccuracy)
-                    missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
-                else
-                    missRadiusForShot = (missRadiusForShot * skillMultiplier);
-
-                float num = VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, base.currentTarget.Cell - base.caster.Position);
-                //float num = VerbUtility.CalculateAdjustedForcedMiss(base.verbProps.forcedMissRadius, base.currentTarget.Cell - base.caster.Position);
-                if (num > 0.5f)
-                {
-                    int max = GenRadial.NumCellsInRadius(num);
+                    int max = GenRadial.NumCellsInRadius(adjustedForcedMissRadius);
                     int num2 = Rand.Range(0, max);
-                    if (num2 > 0)
+                    c = base.currentTarget.Cell + GenRadial.RadialPattern[num2];
+                    /*if (num2 > 0)
                     {
-                        IntVec3 c = base.currentTarget.Cell + GenRadial.RadialPattern[num2];
                         this.ThrowDebugText("ToRadius");
                         this.ThrowDebugText("Rad\nDest", c);
                         ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.NonTargetWorld;
@@ -173,8 +215,12 @@ namespace MortarAccuracy
                         }
                         projectile2.Launch(launcher, drawPos, c, base.currentTarget, projectileHitFlags, equipment, null);
                         return true;
-                    }
+                    }*/
                 }
+
+                //Log.Message("Final target is " + c.ToString());
+                projectile2.Launch(launcher, drawPos, c, base.currentTarget, projectileHitFlags, equipment, null);
+                return true;
             }
             ShotReport shotReport = ShotReport.HitReportFor(base.caster, this, base.currentTarget);
             Thing randomCoverToMissInto = shotReport.GetRandomCoverToMissInto();
