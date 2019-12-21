@@ -28,4 +28,13 @@
         </value>
     </match>
 	</Operation>
+	
+<Operation Class="PatchOperationReplace">
+<success>Always</success>
+<!--Patch for ALL things that use Verb_Shoot and requireLineOfSight = false-->
+    <xpath>/Defs/ThingDef/verbs/li[verbClass="Verb_Shoot" and requireLineOfSight="false"]/verbClass</xpath>
+    <value>
+        <verbClass>MortarAccuracy.Verb_LaunchProjectile_MortarMod</verbClass>
+    </value>
+</Operation>
 </Patch>
