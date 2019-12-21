@@ -7,7 +7,7 @@ using System;
 
 namespace MortarAccuracy
 {
-    [StaticConstructorOnStartup]
+    /*[StaticConstructorOnStartup]
     public static class HarmonyPatches
     {
         static HarmonyInstance harmony;
@@ -26,70 +26,8 @@ namespace MortarAccuracy
             //postfix: new HarmonyMethod(type: patchType, name: nameof(Postfix_Patch_DrawRadius)));
         }
 
-        /*public static void Postfix_Patch_DrawRadius(Targeter __instance)
-        {
-            if (__instance.targetingVerb != null)
-            {
-                if (__instance.targetingVerb.verbProps.forcedMissRadius > 0)
-                {
-                    float missRadiusForShot = __instance.targetingVerb.verbProps.forcedMissRadius;
-                    float skillMultiplier = 1f;
-                    float weatherMultiplier = 1f;
-
-                    // Get weather multiplier
-                    if (__instance.targetingVerb.caster != null)
-                    {
-                        weatherMultiplier = __instance.targetingVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier;
-                    }
-
-                    // Get skill multiplier
-                    if (__instance.targetingVerb is Verb_LaunchProjectile_MortarMod shootVerb)
-                    {
-                        CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
-                        if (compMannable.ManningPawn != null)
-                        {
-                            // Get skills from pawn
-                            int totalSkill = 0;
-                            int skillsTotaled = 0;
-                            if (Settings.intellectualAffectsMortarAccuracy)
-                            {
-                                totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Intellectual).Level;
-                                skillsTotaled++;
-                            }
-                            if (Settings.intellectualAffectsMortarAccuracy)
-                            {
-                                totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Intellectual).Level;
-                                skillsTotaled++;
-                            }
-
-                            if (skillsTotaled > 0)
-                            {
-                                // get average skill
-                                int averageSkill = (int)(((float)totalSkill) / skillsTotaled);
-                                // Modify multiplier
-                                skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
-                            }
-                        }
-                        else
-                        {
-                            // No pawn manning this mortar
-                        }
-                    }
-                    else
-                    {
-                        // Fail to cast verb as mortar shoot verb
-                    }
-
-                    if (Settings.weatherAffectsMortarAccuracy)
-                        missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - weatherMultiplier) * missRadiusForShot);
-                    else
-                        missRadiusForShot = (missRadiusForShot * skillMultiplier);
-
-                    GenDraw.DrawRadiusRing(__instance.targetingVerb.caster.Position, missRadiusForShot);
-                }
-            }
-        }*/
-    }
+        //public static void Postfix_Patch_DrawRadius(Targeter __instance){}
+    }*/
 
     //[HarmonyPatch(typeof(Verb_LaunchProjectile))]
     //[HarmonyPatch("TryCastShot")]
@@ -151,6 +89,7 @@ namespace MortarAccuracy
         public static float maxSkillSpreadReduction = 0.75f;
         public static float minSkillSpreadReduction = -0.4f;
         public static bool showAccuracyRadius = true;
+        public static bool targetLeading = true;
 
         public override void ExposeData()
         {
@@ -160,6 +99,7 @@ namespace MortarAccuracy
             Scribe_Values.Look(ref showAccuracyRadius, "showAccuracyRadius", true);
             Scribe_Values.Look(ref maxSkillSpreadReduction, "maxSkillSpreadReduction", 0.75f);
             Scribe_Values.Look(ref minSkillSpreadReduction, "minSkillSpreadReduction", -0.4f);
+            Scribe_Values.Look(ref targetLeading, "targetLeading", true);
             base.ExposeData();
         }
     }
@@ -193,6 +133,7 @@ namespace MortarAccuracy
 
             listingStandard.CheckboxLabeled(Translator.Translate("OptionWeather"), ref Settings.weatherAffectsMortarAccuracy);
             listingStandard.CheckboxLabeled(Translator.Translate("OptionShowAccuracy"), ref Settings.showAccuracyRadius);
+            listingStandard.CheckboxLabeled(Translator.Translate("OptionTargetLeading"), ref Settings.targetLeading);
 
             listingStandard.End();
             base.DoSettingsWindowContents(inRect);
