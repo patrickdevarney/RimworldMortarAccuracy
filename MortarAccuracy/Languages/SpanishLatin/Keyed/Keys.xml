@@ -6,7 +6,7 @@
 	<OptionSkills>Selecciona que habilidades afectan la precisión. Si se seleccionan múltiples habilidades, se promedian entre sí.</OptionSkills>
 	<OptionSkillIntellectual>La habilidad intelectual afecta a la precisión</OptionSkillIntellectual>
 	<OptionSkillShooting>La habilidad tiro afecta a la precisión</OptionSkillShooting>
-	<OptionBestAccuracy>Mejorar precisión\nLos colonos con la máxima habilidad tienen su precisión de mortero mejorada al {0}% (por defecto es 0%, el valor predeterminado del mod es 75%, el 100% es precisión perfecta)</OptionBestAccuracy>
+	<OptionBestAccuracy>Mejorar precisión\nLos colonos con la máxima habilidad tienen su precisión de mortero mejorada un {0}% (por defecto es 0%, el valor predeterminado del mod es 75%, el 100% es precisión perfecta)</OptionBestAccuracy>
 	<OptionWorstAccuracy>Empeorar precisión\nLos colonos sin habilidad tienen su precisión de mortero {0} un {1}% (por defecto es 0%, el valor predeterminado de mod es -40%)</OptionWorstAccuracy>
 	<Improved>mejorada</Improved>
 	<Reduced>reducida</Reduced>
