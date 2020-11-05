@@ -7,7 +7,7 @@
 	<OptionSkillIntellectual>Навык науки влияет на точность</OptionSkillIntellectual>
 	<OptionSkillShooting>Навык стрельбы влияет на точность</OptionSkillShooting>
 	<OptionBestAccuracy>Наилучшая точность\nТочность стрельбы из минометов пешки с максимальным навыком увеличена до {0}%\n(значение без мода равно 0%, значение мода по умолчанию равно 75%, абсолютная точность равна 100%)</OptionBestAccuracy>
-	<OptionWorstAccuracy>Наихудшая точность\nТочность стрельбы из минометов пешки без навыка {0} на {1}%\n(значение без мода равно 0%, значение мода по умолчанию равно -40%)</OptionWorstAccuracy>
+	<OptionWorstAccuracy>Наихудшая точность\nТочность стрельбы из минометов пешки без навыка {0} на {1}%\n(значение без мода равно 0%, значение мода по умолчанию равно -50%)</OptionWorstAccuracy>
 	<Improved>увеличена</Improved>
 	<Reduced>уменьшена</Reduced>
 	<OptionShowAccuracy>Показывать радиус точности вместо радиуса взрыва</OptionShowAccuracy>

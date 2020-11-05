@@ -27,3 +27,10 @@ E:\Projects\My Rimworld Mods\HobsMortarAccuracy\Source\PatsMortarAccuracy\obj\De
 E:\Projects\My Rimworld Mods\HobsMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\PatsMortarAccuracy.csproj.CopyComplete
 E:\Projects\My Rimworld Mods\HobsMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\MortarAccuracy.dll
 E:\Projects\My Rimworld Mods\HobsMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\MortarAccuracy.pdb
+E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\PatsMortarAccuracy.csprojAssemblyReference.cache
+E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\PatsMortarAccuracy.csproj.CoreCompileInputs.cache
+E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\MortarAccuracy.dll
+E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\MortarAccuracy.pdb
+E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\PatsMortarAccuracy.csproj.CopyComplete
+D:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\v1.2\Assemblies\MortarAccuracy.dll
+D:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\v1.2\Assemblies\MortarAccuracy.pdb

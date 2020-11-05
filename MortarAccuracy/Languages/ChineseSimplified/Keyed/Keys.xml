@@ -6,7 +6,7 @@
   <OptionSkillIntellectual>受智识技能等级影响</OptionSkillIntellectual>
   <OptionSkillShooting>受射击技能等级影响</OptionSkillShooting>
   <OptionBestAccuracy>精准度加成\n角色在拥有满级技能时操作迫击炮的精准度加成为 {0}%（原版为0%，mod默认为75%，完美精准度为100%）</OptionBestAccuracy>
-  <OptionWorstAccuracy>精准度惩罚\n角色在无技能加成时操作迫击炮的精准度{0}为 {1}%（原版为0%，mod默认为-40%）</OptionWorstAccuracy>
+  <OptionWorstAccuracy>精准度惩罚\n角色在无技能加成时操作迫击炮的精准度{0}为 {1}%（原版为0%，mod默认为-50%）</OptionWorstAccuracy>
   <Improved>加成</Improved>
   <Reduced>惩罚</Reduced>
   <OptionShowAccuracy>强制射击时显示射击精度半径而非炮弹爆炸半径</OptionShowAccuracy>

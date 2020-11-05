@@ -7,7 +7,7 @@
 	<OptionSkillIntellectual>Intellectual skill affects accuracy</OptionSkillIntellectual>
 	<OptionSkillShooting>Shooting skill affects accuracy</OptionSkillShooting>
 	<OptionBestAccuracy>Best accuracy\nPawns with maximum skill have their mortar accuracy improved to {0}% (vanilla is 0%, mod default is 75%, perfect accuracy is 100%)</OptionBestAccuracy>
-	<OptionWorstAccuracy>Worst accuracy\nPawns with no skill have their mortar accuracy {0} by {1}% (vanilla is 0%, mod default is -40%)</OptionWorstAccuracy>
+	<OptionWorstAccuracy>Worst accuracy\nPawns with no skill have their mortar accuracy {0} by {1}% (vanilla is 0%, mod default is -50%)</OptionWorstAccuracy>
 	<Improved>improved</Improved>
 	<Reduced>reduced</Reduced>
 	<OptionShowAccuracy>Show accuracy radius instead of blast radius</OptionShowAccuracy>

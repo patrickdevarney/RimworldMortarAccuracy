@@ -18,7 +18,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>D:\Program Files %28x86%29\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\Assemblies\</OutputPath>
+    <OutputPath>D:\Program Files %28x86%29\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\v1.2\Assemblies\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -34,8 +34,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>C:\Users\patri\Downloads\Release (1)\Release\net35\0Harmony.dll</HintPath>
+    <Reference Include="0Harmony, Version=2.0.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Lib.Harmony.2.0.4\lib\net472\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="0MultiplayerAPI, Version=0.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\RimWorld.MultiplayerAPI.0.2.0\lib\net472\0MultiplayerAPI.dll</HintPath>
@@ -59,6 +59,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Patches.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Verb_LaunchProjectile_MortarMod.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
