@@ -5,6 +5,7 @@
 	<supportedVersions>
 		<li>1.0</li>
 		<li>1.1</li>
+		<li>1.2</li>
 	</supportedVersions>
 	<packageId>hobtook.mortaraccuracy</packageId>
 <description>A collection of changes and options to make mortar accuracy better/worse, instead of having a fixed spread radius of 13 tiles.

@@ -2,6 +2,7 @@
 using UnityEngine;
 using Verse;
 using System.Collections.Generic;
+using Multiplayer.API;
 
 namespace MortarAccuracy
 {
@@ -194,32 +195,34 @@ namespace MortarAccuracy
             {
                 float adjustedForcedMissRadius = GetAdjustedForcedMissRadius();
                 ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
-                IntVec3 c = currentTarget.Cell;
+                IntVec3 targetPosition = currentTarget.Cell;
                 if (adjustedForcedMissRadius > 0.5f)
                 {
                     int max = GenRadial.NumCellsInRadius(adjustedForcedMissRadius);
-                    int num2 = Rand.Range(0, max);
-                    c = base.currentTarget.Cell + GenRadial.RadialPattern[num2];
-                    /*if (num2 > 0)
+
+                    if (MP.enabled)
                     {
-                        this.ThrowDebugText("ToRadius");
-                        this.ThrowDebugText("Rad\nDest", c);
-                        ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.NonTargetWorld;
-                        if (Rand.Chance(0.5f))
-                        {
-                            projectileHitFlags = ProjectileHitFlags.All;
-                        }
-                        if (!base.canHitNonTargetPawnsNow)
-                        {
-                            projectileHitFlags &= ~ProjectileHitFlags.NonTargetPawns;
-                        }
-                        projectile2.Launch(launcher, drawPos, c, base.currentTarget, projectileHitFlags, equipment, null);
-                        return true;
-                    }*/
+                        Rand.PushState();
+                    }
+
+                    // Calculate random target position using a uniform distribution
+                    float randomCircleArea = Rand.Range(0, Mathf.PI * adjustedForcedMissRadius * adjustedForcedMissRadius);
+                    float radiusOfRandomCircle = Mathf.Sqrt(randomCircleArea / Mathf.PI);
+                    float randomAngle = Rand.Range(0, 2 * Mathf.PI);
+                    targetPosition = new IntVec3(
+                        (int)(targetPosition.x + radiusOfRandomCircle * Mathf.Cos(randomAngle)),
+                        targetPosition.y,
+                        (int)(targetPosition.z + radiusOfRandomCircle * Mathf.Sin(randomAngle))
+                        );
+
+                    if (MP.enabled)
+                    {
+                        Rand.PopState();
+                    }
                 }
 
                 //Log.Message("Final target is " + c.ToString());
-                projectile2.Launch(launcher, drawPos, c, base.currentTarget, projectileHitFlags, equipment, null);
+                projectile2.Launch(launcher, drawPos, targetPosition, base.currentTarget, projectileHitFlags, equipment, null);
                 return true;
             }
             ShotReport shotReport = ShotReport.HitReportFor(base.caster, this, base.currentTarget);
