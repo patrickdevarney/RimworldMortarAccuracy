@@ -22,7 +22,7 @@ namespace MortarAccuracy
             //[HarmonyPrefix]
             static bool Prefix(Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget)
             {
-                if (__instance.verbProps.forcedMissRadius < 0.5f)
+                if (__instance.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
                 {
                     // Assuming this is not a mortar-like thing
                     // Perform vanilla logic
