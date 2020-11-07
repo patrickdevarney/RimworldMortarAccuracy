@@ -20,7 +20,7 @@ namespace MortarAccuracy
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
             //[HarmonyPrefix]
-            static bool Prefix(Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget)
+            static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget)
             {
                 if (__instance.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
                 {
@@ -33,17 +33,20 @@ namespace MortarAccuracy
                     // Perform the same vanilla checks
                     if (___currentTarget.HasThing && ___currentTarget.Thing.Map != __instance.caster.Map)
                     {
+                        __result = false;
                         return false;
                     }
                     ThingDef projectile = __instance.Projectile;
                     if (projectile == null)
                     {
+                        __result = false;
                         return false;
                     }
                     ShootLine shootLine = default(ShootLine);
                     bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
                     if (__instance.verbProps.stopBurstWithoutLos && !flag)
                     {
+                        __result = false;
                         return false;
                     }
 
@@ -55,7 +58,13 @@ namespace MortarAccuracy
                         {
                             comp.Notify_ProjectileLaunched();
                         }
+                        CompReloadable comp2 = __instance.EquipmentSource.GetComp<CompReloadable>();
+                        if (comp2 != null)
+                        {
+                            comp2.UsedOnce();
+                        }
                     }
+
                     Thing launcher = __instance.caster;
                     Thing equipment = __instance.EquipmentSource;
                     CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
@@ -148,10 +157,8 @@ namespace MortarAccuracy
                     float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance as Verb_Shoot, ___currentTarget);
                     ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
                     IntVec3 targetPosition = ___currentTarget.Cell;
-                    if (adjustedForcedMissRadius > 0.5f)
+                    //if (adjustedForcedMissRadius > 0.5f)
                     {
-                        int max = GenRadial.NumCellsInRadius(adjustedForcedMissRadius);
-
                         if (MP.enabled)
                         {
                             Rand.PushState();
@@ -176,6 +183,7 @@ namespace MortarAccuracy
                     //Log.Message("Final target is " + c.ToString());
                     projectile2.Launch(launcher, drawPos, targetPosition, ___currentTarget, projectileHitFlags, equipment, null);
                 }
+                __result = true;
                 return false;
             }
         }
@@ -185,6 +193,13 @@ namespace MortarAccuracy
         {
             static bool Prefix(ref float __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, out bool needLOSToCenter)
             {
+                if (__instance.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                {
+                    // Assuming this is not a mortar-like thing
+                    // Perform vanilla logic
+                    needLOSToCenter = true;
+                    return true;
+                }
                 if (!Settings.showAccuracyRadius)
                 {
                     needLOSToCenter = true;
@@ -208,7 +223,11 @@ namespace MortarAccuracy
 
         static float GetAdjustedForcedMissRadius(Verb_Shoot shootVerb, LocalTargetInfo ___currentTarget)
         {
-            if (shootVerb.verbProps.forcedMissRadius > 0.5f)
+            if (shootVerb.verbProps.forcedMissRadius < 0.5f || shootVerb.verbProps.requireLineOfSight)
+            {
+                return 0;
+            }
+            else
             {
                 CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
                 // Grab default forced miss radius for this particular weapon
@@ -245,10 +264,6 @@ namespace MortarAccuracy
                     missRadiusForShot = (missRadiusForShot * skillMultiplier);
 
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
-            }
-            else
-            {
-                return 0;
             }
         }
     }
