@@ -9,9 +9,10 @@
   <OptionWorstAccuracy>精准度惩罚\n角色在无技能加成时操作迫击炮的精准度{0}为 {1}%（原版为0%，mod默认为-50%）</OptionWorstAccuracy>
   <Improved>加成</Improved>
   <Reduced>惩罚</Reduced>
-  <OptionShowAccuracy>强制射击时显示射击精度半径而非炮弹爆炸半径</OptionShowAccuracy>
+  <OptionShowAccuracy>强制射击时显示炮弹落点半径而非炮弹爆炸半径</OptionShowAccuracy>
 
   <OptionCover>掩体降低精准度</OptionCover>
   <OptionLeadTarget>允许殖民者调整以射击移动单位</OptionLeadTarget>
+  <OptionTargetLeading>射击点自动跟随移动单位</OptionTargetLeading>
 
 </LanguageData>
