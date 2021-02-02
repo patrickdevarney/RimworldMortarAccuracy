@@ -91,6 +91,7 @@ namespace MortarAccuracy
                                 compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
                         }
                     }
+
                     Vector3 drawPos = __instance.caster.DrawPos;
                     Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
 
@@ -155,7 +156,7 @@ namespace MortarAccuracy
                         }
                     }
 
-                    float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance as Verb_Shoot, ___currentTarget);
+                    float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
                     ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
                     IntVec3 targetPosition = ___currentTarget.Cell;
                     //if (adjustedForcedMissRadius > 0.5f)
@@ -210,7 +211,7 @@ namespace MortarAccuracy
                 {
                     needLOSToCenter = false;
 
-                    float missRadius = GetAdjustedForcedMissRadius(__instance as Verb_Shoot, ___currentTarget);
+                    float missRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
                     if (missRadius < 1)
                     {
                         missRadius = 1f;
@@ -222,7 +223,7 @@ namespace MortarAccuracy
             }
         }
 
-        static float GetAdjustedForcedMissRadius(Verb_Shoot shootVerb, LocalTargetInfo ___currentTarget)
+        static float GetAdjustedForcedMissRadius(Verb_LaunchProjectile shootVerb, LocalTargetInfo ___currentTarget)
         {
             if (shootVerb.verbProps.forcedMissRadius < 0.5f || shootVerb.verbProps.requireLineOfSight)
             {
@@ -230,23 +231,32 @@ namespace MortarAccuracy
             }
             else
             {
+                Pawn shooterPawn = null;
                 CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
+                if (compMannable != null && compMannable.ManningPawn != null)
+                {
+                    shooterPawn = compMannable.ManningPawn;
+                }
+                else
+                {
+                    shooterPawn = shootVerb.CasterPawn;
+                }
                 // Grab default forced miss radius for this particular weapon
                 float missRadiusForShot = shootVerb.verbProps.forcedMissRadius;
                 float skillMultiplier = 1f;
                 // We want to multiply this forced miss radius by our pawn's skill modifier
-                if (compMannable != null && compMannable.ManningPawn != null && compMannable.ManningPawn.skills != null)
+                if (shooterPawn != null && shooterPawn.skills != null)
                 {
                     int totalSkill = 0;
                     int skillsTotaled = 0;
                     if (Settings.intellectualAffectsMortarAccuracy)
                     {
-                        totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Intellectual).Level;
+                        totalSkill += shooterPawn.skills.GetSkill(SkillDefOf.Intellectual).Level;
                         skillsTotaled++;
                     }
                     if (Settings.shootingAffectsMortarAccuracy)
                     {
-                        totalSkill += compMannable.ManningPawn.skills.GetSkill(SkillDefOf.Shooting).Level;
+                        totalSkill += shooterPawn.skills.GetSkill(SkillDefOf.Shooting).Level;
                         skillsTotaled++;
                     }
 
@@ -257,7 +267,6 @@ namespace MortarAccuracy
                         skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
                     }
                 }
-
                 // Weather should affect shot no matter what the skill is
                 if (Settings.weatherAffectsMortarAccuracy)
                     missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - shootVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
@@ -267,5 +276,4 @@ namespace MortarAccuracy
             }
         }
     }
-
 }
