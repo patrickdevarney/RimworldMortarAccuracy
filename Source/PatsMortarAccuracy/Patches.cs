@@ -17,6 +17,7 @@ namespace MortarAccuracy
         }
 
         [HarmonyPatch(typeof(Verb_LaunchProjectile), "TryCastShot")]
+        [HarmonyBefore("com.yayo.combat")]
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
             //[HarmonyPrefix]
@@ -262,7 +263,6 @@ namespace MortarAccuracy
                     missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - shootVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
                 else
                     missRadiusForShot = (missRadiusForShot * skillMultiplier);
-
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
             }
         }
