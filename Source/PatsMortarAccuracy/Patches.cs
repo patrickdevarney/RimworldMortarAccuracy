@@ -83,6 +83,7 @@ namespace MortarAccuracy
                                 skillsAffectingAccuracy++;
 
                             float skillXP = __instance.verbProps.AdjustedFullCycleTime(__instance, __instance.CasterPawn) * 100;
+                            skillXP = Mathf.Clamp(skillXP, 0, 200);
                             skillXP /= skillsAffectingAccuracy;
 
                             if (Settings.intellectualAffectsMortarAccuracy)
@@ -190,7 +191,56 @@ namespace MortarAccuracy
             }
         }
 
-        [HarmonyPatch(typeof(Verb_LaunchProjectile), "HighlightFieldRadiusAroundTarget")]
+        [HarmonyPatch(typeof(Verb), "DrawHighlightFieldRadiusAroundTarget")]
+        static class Harmony_Verb_DrawHighlightFieldRadiusAroundTarget
+        {
+            static bool Prefix(Verb __instance, LocalTargetInfo target)
+            {
+                if (!(__instance is Verb_LaunchProjectile))
+                {
+                    // Do vanilla stuff
+                    return true;
+                }
+
+                var projectileVerb = __instance as Verb_LaunchProjectile;
+                if (projectileVerb.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                {
+                    // Assuming this is not a mortar-like thing
+                    // Do vanilla stuff
+                    return true;
+                }
+
+                float missRadius = GetAdjustedForcedMissRadius(projectileVerb, target);
+                if (missRadius < 1)
+                {
+                    missRadius = 1f;
+                }
+
+                // Draw the explosion radius
+                if (Settings.showExplosionRadius)
+                {
+                    ThingDef projectile = projectileVerb.Projectile;
+                    if (projectile != null)
+                    {
+                        // Nudge the accuracy radius to prevent circles drawing on top of each other
+                        if (((int)projectile.projectile.explosionRadius) == ((int)missRadius))
+                        {
+                            missRadius += 1;
+                        }
+
+                        GenDraw.DrawRadiusRing(target.Cell, projectile.projectile.explosionRadius, Color.red);
+                    }
+                }
+
+                // Draw accuracy radius
+                GenDraw.DrawRadiusRing(target.Cell, missRadius, Color.white);
+
+                // Skip normal execution
+                return false;
+            }
+        }
+
+        /*[HarmonyPatch(typeof(Verb_LaunchProjectile), "HighlightFieldRadiusAroundTarget")]
         static class Harmony_Verb_LaunchProjectile_HighlightFieldRadiusAroundTarget
         {
             static bool Prefix(ref float __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, out bool needLOSToCenter)
@@ -217,11 +267,12 @@ namespace MortarAccuracy
                         missRadius = 1f;
                     }
                     __result = missRadius;
+
                     // Skip normal execution, we will draw our own overlay
                     return false;
                 }
             }
-        }
+        }*/
 
         static float GetAdjustedForcedMissRadius(Verb_LaunchProjectile shootVerb, LocalTargetInfo ___currentTarget)
         {
@@ -272,6 +323,8 @@ namespace MortarAccuracy
                     missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - shootVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
                 else
                     missRadiusForShot = (missRadiusForShot * skillMultiplier);
+
+                // TODO: this is wrong. __curentTarget.Cell is origin when we are hovering over it, preview is incorrect
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
             }
         }

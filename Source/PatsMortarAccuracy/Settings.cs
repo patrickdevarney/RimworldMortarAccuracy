@@ -10,7 +10,7 @@ namespace MortarAccuracy
         public static bool weatherAffectsMortarAccuracy = true;
         public static float maxSkillSpreadReduction = 0.75f;
         public static float minSkillSpreadReduction = -0.4f;
-        public static bool showAccuracyRadius = true;
+        public static bool showExplosionRadius = true;
         public static bool targetLeading = true;
 
         public override void ExposeData()
@@ -18,7 +18,7 @@ namespace MortarAccuracy
             Scribe_Values.Look(ref intellectualAffectsMortarAccuracy, "intellectualAffectsMortarAccuracy", true);
             Scribe_Values.Look(ref shootingAffectsMortarAccuracy, "shootingAffectsMortarAccuracy", false);
             Scribe_Values.Look(ref weatherAffectsMortarAccuracy, "weatherAffectsMortarAccuracy", true);
-            Scribe_Values.Look(ref showAccuracyRadius, "showAccuracyRadius", true);
+            Scribe_Values.Look(ref showExplosionRadius, "showExplosionRadius", true);
             Scribe_Values.Look(ref maxSkillSpreadReduction, "maxSkillSpreadReduction", 0.75f);
             Scribe_Values.Look(ref minSkillSpreadReduction, "minSkillSpreadReduction", -0.5f);
             Scribe_Values.Look(ref targetLeading, "targetLeading", true);
@@ -54,7 +54,7 @@ namespace MortarAccuracy
                 Settings.minSkillSpreadReduction = Settings.maxSkillSpreadReduction;
 
             listingStandard.CheckboxLabeled(Translator.Translate("OptionWeather"), ref Settings.weatherAffectsMortarAccuracy);
-            listingStandard.CheckboxLabeled(Translator.Translate("OptionShowAccuracy"), ref Settings.showAccuracyRadius);
+            listingStandard.CheckboxLabeled(Translator.Translate("OptionShowExplosionRadius"), ref Settings.showExplosionRadius);
             listingStandard.CheckboxLabeled(Translator.Translate("OptionTargetLeading"), ref Settings.targetLeading);
 
             listingStandard.End();
