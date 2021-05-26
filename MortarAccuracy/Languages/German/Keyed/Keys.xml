@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--German-->
+<LanguageData>
+	<MortarAccuracy>Mörser Genauigkeit</MortarAccuracy>
+	<OptionWeather>Das Wetter beeinflusst die Genauigkeit.</OptionWeather>
+	<OptionSkills>Welche Skills sollen die Genauigkeit beeinflussen? Wenn mehrere Skills ausgewählt sind, werden sie gemittelt.</OptionSkills>
+	<OptionSkillIntellectual>Geistige Arbeit</OptionSkillIntellectual>
+	<OptionSkillShooting>Fernkampf</OptionSkillShooting>
+	<OptionBestAccuracy>Beste Genauigkeit\nBei Nutzern mit maximalen Skill erhöht sich die Genauigkeit um {0}%. (Standard ist 0%, Mod-Standard ist 75%, perfekte Genauigkeit bei 100%)</OptionBestAccuracy>
+	<OptionWorstAccuracy>Schlechte Genauigkeit\nBei Nutzern ohne Skill {0} sich die Genauigkeit um {1}%. (Standard ist 0%, Mod-Standard ist -50%)</OptionWorstAccuracy>
+	<Improved>verbessert</Improved>
+	<Reduced>verringert</Reduced>
+
+	<OptionShowAccuracy>Genauigkeitsradius anstelle des Explosionsradius anzeigen</OptionShowAccuracy>
+  <OptionShowExplosionRadius>Explosionsradius anzeigen</OptionShowExplosionRadius>
+	
+	<OptionCover>Abdeckung verringert die Genauigkeit</OptionCover>
+	<OptionLeadTarget>Erlaubt es Nutzern, die Ziele zu verfolgen.</OptionLeadTarget>
+	<OptionTargetLeading>Bewegte Ziele automatisch verfolgen.</OptionTargetLeading>
+</LanguageData>
