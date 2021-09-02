@@ -32,4 +32,4 @@ Combat Extended: Incompatible! Patch is unlikely with CE being such a large over
 
 ### Translations
 English, Spanish (Latin American), Russian, and Chinese Simplified are suppported! Thanks to all that contributed!
-If you'd like to contribute to a translation, the file path is below. You can copy the file, edit the text, and send me a link to include it in the next update!
+If you'd like to contribute to a translation, either fork this repo and open a pull request or edit the files in /Languages and send me a link to include the translated files in the next update!
