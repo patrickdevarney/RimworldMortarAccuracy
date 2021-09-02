@@ -28,7 +28,7 @@ Combat Extended: Incompatible! Patch is unlikely with CE being such a large over
 [XND] TE Turret Expansion: This mod also affects mortar accuracy so it is likely that whatever mod is higher in your load order will be overwritten. Patch is likely.
 
 ### Multiplayer
-99% sure this works in multiplayer, but I have yet to test it.
+Native Multiplayer support has been added
 
 ### Translations
 English, Spanish (Latin American), Russian, and Chinese Simplified are suppported! Thanks to all that contributed!
