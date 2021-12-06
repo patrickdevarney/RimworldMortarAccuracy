@@ -23,7 +23,7 @@ namespace MortarAccuracy
             //[HarmonyPrefix]
             static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget)
             {
-                if (__instance.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                if (__instance.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
                 {
                     // Assuming this is not a mortar-like thing
                     // Perform vanilla logic
@@ -184,7 +184,7 @@ namespace MortarAccuracy
                     }
 
                     //Log.Message("Final target is " + c.ToString());
-                    projectile2.Launch(launcher, drawPos, targetPosition, ___currentTarget, projectileHitFlags, equipment, null);
+                    projectile2.Launch(launcher, drawPos, targetPosition, ___currentTarget, projectileHitFlags, false, equipment, null);
                 }
                 __result = true;
                 return false;
@@ -203,7 +203,7 @@ namespace MortarAccuracy
                 }
 
                 var projectileVerb = __instance as Verb_LaunchProjectile;
-                if (projectileVerb.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                if (projectileVerb.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
                 {
                     // Assuming this is not a mortar-like thing
                     // Do vanilla stuff
@@ -276,7 +276,7 @@ namespace MortarAccuracy
 
         static float GetAdjustedForcedMissRadius(Verb_LaunchProjectile shootVerb, LocalTargetInfo ___currentTarget)
         {
-            if (shootVerb.verbProps.forcedMissRadius < 0.5f || shootVerb.verbProps.requireLineOfSight)
+            if (shootVerb.verbProps.ForcedMissRadius < 0.5f || shootVerb.verbProps.requireLineOfSight)
             {
                 return 0;
             }
@@ -293,7 +293,7 @@ namespace MortarAccuracy
                     shooterPawn = shootVerb.CasterPawn;
                 }
                 // Grab default forced miss radius for this particular weapon
-                float missRadiusForShot = shootVerb.verbProps.forcedMissRadius;
+                float missRadiusForShot = shootVerb.verbProps.ForcedMissRadius;
                 float skillMultiplier = 1f;
                 // We want to multiply this forced miss radius by our pawn's skill modifier
                 if (shooterPawn != null && shooterPawn.skills != null)

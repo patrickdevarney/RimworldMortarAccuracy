@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LanguageInfo>
+  <friendlyNameNative>русский</friendlyNameNative>
+  <friendlyNameEnglish>Russian</friendlyNameEnglish>
+  <credits>
+    <li Class="CreditRecord_Role">
+      <roleKey>Credit_Translator</roleKey>
+      <creditee>Ninja Kitten</creditee>
+    </li>	
+  </credits>
+</LanguageInfo>

@@ -11,7 +11,7 @@
 	<Improved>improved</Improved>
 	<Reduced>reduced</Reduced>
 	<OptionShowAccuracy>Show accuracy radius instead of blast radius</OptionShowAccuracy>
-	
+	<OptionShowExplosionRadius>Show explosion radius</OptionShowExplosionRadius>
 	<OptionCover>Cover reduces accuracy</OptionCover>
 	<OptionLeadTarget>Allow colonists to lead their targets</OptionLeadTarget>
 	<OptionTargetLeading>Automatically lead moving targets</OptionTargetLeading>

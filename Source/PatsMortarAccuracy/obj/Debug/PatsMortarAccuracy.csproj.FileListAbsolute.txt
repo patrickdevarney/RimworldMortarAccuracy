@@ -34,3 +34,5 @@ E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\MortarAccura
 E:\Repos\RimworldMortarAccuracy\Source\PatsMortarAccuracy\obj\Debug\PatsMortarAccuracy.csproj.CopyComplete
 D:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\v1.2\Assemblies\MortarAccuracy.dll
 D:\Program Files (x86)\Steam\steamapps\common\RimWorld\Mods\MortarAccuracy\v1.2\Assemblies\MortarAccuracy.pdb
+E:\Repos\RimworldMortarAccuracy\BUILT BINARIES\MortarAccuracy.dll
+E:\Repos\RimworldMortarAccuracy\BUILT BINARIES\MortarAccuracy.pdb
