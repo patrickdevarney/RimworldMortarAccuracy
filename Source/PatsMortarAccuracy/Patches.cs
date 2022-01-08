@@ -68,30 +68,7 @@ namespace MortarAccuracy
 
                     Thing launcher = __instance.caster;
                     Thing equipment = __instance.EquipmentSource;
-                    CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
-                    if (compMannable != null && compMannable.ManningPawn != null)
-                    {
-                        launcher = compMannable.ManningPawn;
-                        equipment = __instance.caster;
-                        // Earn skills
-                        if (compMannable.ManningPawn.skills != null)
-                        {
-                            int skillsAffectingAccuracy = 0;
-                            if (Settings.intellectualAffectsMortarAccuracy)
-                                skillsAffectingAccuracy++;
-                            if (Settings.shootingAffectsMortarAccuracy)
-                                skillsAffectingAccuracy++;
-
-                            float skillXP = __instance.verbProps.AdjustedFullCycleTime(__instance, __instance.CasterPawn) * 100;
-                            skillXP = Mathf.Clamp(skillXP, 0, 200);
-                            skillXP /= skillsAffectingAccuracy;
-
-                            if (Settings.intellectualAffectsMortarAccuracy)
-                                compMannable.ManningPawn.skills.Learn(SkillDefOf.Intellectual, skillXP, false);
-                            if (Settings.shootingAffectsMortarAccuracy)
-                                compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
-                        }
-                    }
+                    GainSkills(launcher, equipment, __instance);
 
                     Vector3 drawPos = __instance.caster.DrawPos;
                     Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
@@ -196,14 +173,14 @@ namespace MortarAccuracy
         {
             static bool Prefix(Verb __instance, LocalTargetInfo target)
             {
-                if (!(__instance is Verb_LaunchProjectile))
-                {
-                    // Do vanilla stuff
+                if (__instance.verbProps.requireLineOfSight)
                     return true;
-                }
+
+                if (!(__instance is Verb_LaunchProjectile))
+                    return true;
 
                 var projectileVerb = __instance as Verb_LaunchProjectile;
-                if (projectileVerb.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                if (projectileVerb.verbProps.ForcedMissRadius < 0.5f)
                 {
                     // Assuming this is not a mortar-like thing
                     // Do vanilla stuff
@@ -239,40 +216,6 @@ namespace MortarAccuracy
                 return false;
             }
         }
-
-        /*[HarmonyPatch(typeof(Verb_LaunchProjectile), "HighlightFieldRadiusAroundTarget")]
-        static class Harmony_Verb_LaunchProjectile_HighlightFieldRadiusAroundTarget
-        {
-            static bool Prefix(ref float __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, out bool needLOSToCenter)
-            {
-                if (__instance.verbProps.forcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
-                {
-                    // Assuming this is not a mortar-like thing
-                    // Perform vanilla logic
-                    needLOSToCenter = true;
-                    return true;
-                }
-                if (!Settings.showAccuracyRadius)
-                {
-                    needLOSToCenter = true;
-                    return true;
-                }
-                else
-                {
-                    needLOSToCenter = false;
-
-                    float missRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
-                    if (missRadius < 1)
-                    {
-                        missRadius = 1f;
-                    }
-                    __result = missRadius;
-
-                    // Skip normal execution, we will draw our own overlay
-                    return false;
-                }
-            }
-        }*/
 
         static float GetAdjustedForcedMissRadius(Verb_LaunchProjectile shootVerb, LocalTargetInfo ___currentTarget)
         {
@@ -315,7 +258,11 @@ namespace MortarAccuracy
                     {
                         // get average skill
                         int averageSkill = (int)(((float)totalSkill) / skillsTotaled);
-                        skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
+                        skillMultiplier = 1
+                            - (Mathf.Clamp01((averageSkill - SkillRecord.MinLevel) / (SkillRecord.MaxLevel - SkillRecord.MinLevel))
+                            * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction)
+                            + Settings.minSkillSpreadReduction);
+                        //skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
                     }
                 }
                 // Weather should affect shot no matter what the skill is
@@ -326,6 +273,37 @@ namespace MortarAccuracy
 
                 // TODO: this is wrong. __curentTarget.Cell is origin when we are hovering over it, preview is incorrect
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
+            }
+        }
+
+        static void GainSkills(Thing launcher, Thing equipment, Verb_LaunchProjectile shootVerb)
+        {
+            CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
+            if (compMannable != null && compMannable.ManningPawn != null)
+            {
+                launcher = compMannable.ManningPawn;
+                equipment = shootVerb.caster;
+                // Earn skills
+                if (compMannable.ManningPawn.skills != null)
+                {
+                    int skillsAffectingAccuracy = 0;
+                    if (Settings.intellectualAffectsMortarAccuracy)
+                        skillsAffectingAccuracy++;
+                    if (Settings.shootingAffectsMortarAccuracy)
+                        skillsAffectingAccuracy++;
+
+                    if (skillsAffectingAccuracy > 0)
+                    {
+                        float skillXP = shootVerb.verbProps.AdjustedFullCycleTime(shootVerb, shootVerb.CasterPawn) * 100;
+                        skillXP = Mathf.Clamp(skillXP, 0, 200);
+                        skillXP /= skillsAffectingAccuracy;
+
+                        if (Settings.intellectualAffectsMortarAccuracy)
+                            compMannable.ManningPawn.skills.Learn(SkillDefOf.Intellectual, skillXP, false);
+                        if (Settings.shootingAffectsMortarAccuracy)
+                            compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
+                    }
+                }
             }
         }
     }
