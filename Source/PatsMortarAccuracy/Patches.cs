@@ -44,7 +44,8 @@ namespace MortarAccuracy
                         return false;
                     }
                     ShootLine shootLine = default(ShootLine);
-                    bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
+                    Verb baseVerb = __instance as Verb;
+                    bool flag = baseVerb.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
                     if (__instance.verbProps.stopBurstWithoutLos && !flag)
                     {
                         __result = false;
@@ -52,14 +53,14 @@ namespace MortarAccuracy
                     }
 
                     // Vanilla checks pass, we can shoot
-                    if (__instance.EquipmentSource != null)
+                    if (baseVerb.EquipmentSource != null)
                     {
-                        CompChangeableProjectile comp = __instance.EquipmentSource.GetComp<CompChangeableProjectile>();
+                        CompChangeableProjectile comp = baseVerb.EquipmentSource.GetComp<CompChangeableProjectile>();
                         if (comp != null)
                         {
                             comp.Notify_ProjectileLaunched();
                         }
-                        CompReloadable comp2 = __instance.EquipmentSource.GetComp<CompReloadable>();
+                        CompReloadable comp2 = baseVerb.EquipmentSource.GetComp<CompReloadable>();
                         if (comp2 != null)
                         {
                             comp2.UsedOnce();
@@ -67,7 +68,7 @@ namespace MortarAccuracy
                     }
 
                     Thing launcher = __instance.caster;
-                    Thing equipment = __instance.EquipmentSource;
+                    Thing equipment = baseVerb.EquipmentSource;
                     GainSkills(launcher, equipment, __instance);
 
                     Vector3 drawPos = __instance.caster.DrawPos;
@@ -253,16 +254,13 @@ namespace MortarAccuracy
                         totalSkill += shooterPawn.skills.GetSkill(SkillDefOf.Shooting).Level;
                         skillsTotaled++;
                     }
-
                     if (skillsTotaled > 0)
                     {
                         // get average skill
                         int averageSkill = (int)(((float)totalSkill) / skillsTotaled);
-                        skillMultiplier = 1
-                            - (Mathf.Clamp01((averageSkill - SkillRecord.MinLevel) / (SkillRecord.MaxLevel - SkillRecord.MinLevel))
-                            * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction)
-                            + Settings.minSkillSpreadReduction);
-                        //skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
+                        // Support averageSkill > SkillRecord.MaxLevel
+                        averageSkill = Mathf.Clamp(averageSkill, SkillRecord.MinLevel, SkillRecord.MaxLevel);
+                        skillMultiplier = 1 - ((averageSkill - SkillRecord.MinLevel) * (Settings.maxSkillSpreadReduction - Settings.minSkillSpreadReduction) / (SkillRecord.MaxLevel - SkillRecord.MinLevel) + Settings.minSkillSpreadReduction);
                     }
                 }
                 // Weather should affect shot no matter what the skill is
@@ -270,7 +268,6 @@ namespace MortarAccuracy
                     missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - shootVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
                 else
                     missRadiusForShot = (missRadiusForShot * skillMultiplier);
-
                 // TODO: this is wrong. __curentTarget.Cell is origin when we are hovering over it, preview is incorrect
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
             }
