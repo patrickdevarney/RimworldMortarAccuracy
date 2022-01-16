@@ -26,14 +26,14 @@ Load order does not matter in order to affect modded mortars.
 </description>
 
 <modDependenciesByVersion>
-	<li>
-		<v1.3>
+	<v1.3>
+		<li>
 			<packageId>brrainz.harmony</packageId>
 			<displayName>Harmony</displayName>
 			<steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
 			<downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/latest</downloadUrl>
-		</v1.3>
-	</li>
+		</li>
+	</v1.3>
 </modDependenciesByVersion>
 
 </ModMetaData>

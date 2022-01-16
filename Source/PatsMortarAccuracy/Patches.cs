@@ -69,7 +69,14 @@ namespace MortarAccuracy
 
                     Thing launcher = __instance.caster;
                     Thing equipment = baseVerb.EquipmentSource;
-                    GainSkills(launcher, equipment, __instance);
+                    CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
+                    if (compMannable != null && compMannable.ManningPawn != null)
+                    {
+                        launcher = compMannable.ManningPawn;
+                        equipment = __instance.caster;
+                        // Earn skills
+                        GainSkills(__instance, compMannable);
+                    }
 
                     Vector3 drawPos = __instance.caster.DrawPos;
                     Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
@@ -273,33 +280,27 @@ namespace MortarAccuracy
             }
         }
 
-        static void GainSkills(Thing launcher, Thing equipment, Verb_LaunchProjectile shootVerb)
+        static void GainSkills(Verb_LaunchProjectile shootVerb, CompMannable compMannable)
         {
-            CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
-            if (compMannable != null && compMannable.ManningPawn != null)
+            // Earn skills
+            if (compMannable.ManningPawn.skills != null)
             {
-                launcher = compMannable.ManningPawn;
-                equipment = shootVerb.caster;
-                // Earn skills
-                if (compMannable.ManningPawn.skills != null)
+                int skillsAffectingAccuracy = 0;
+                if (Settings.intellectualAffectsMortarAccuracy)
+                    skillsAffectingAccuracy++;
+                if (Settings.shootingAffectsMortarAccuracy)
+                    skillsAffectingAccuracy++;
+
+                if (skillsAffectingAccuracy > 0)
                 {
-                    int skillsAffectingAccuracy = 0;
+                    float skillXP = shootVerb.verbProps.AdjustedFullCycleTime(shootVerb, shootVerb.CasterPawn) * 100;
+                    skillXP = Mathf.Clamp(skillXP, 0, 200);
+                    skillXP /= skillsAffectingAccuracy;
+
                     if (Settings.intellectualAffectsMortarAccuracy)
-                        skillsAffectingAccuracy++;
+                        compMannable.ManningPawn.skills.Learn(SkillDefOf.Intellectual, skillXP, false);
                     if (Settings.shootingAffectsMortarAccuracy)
-                        skillsAffectingAccuracy++;
-
-                    if (skillsAffectingAccuracy > 0)
-                    {
-                        float skillXP = shootVerb.verbProps.AdjustedFullCycleTime(shootVerb, shootVerb.CasterPawn) * 100;
-                        skillXP = Mathf.Clamp(skillXP, 0, 200);
-                        skillXP /= skillsAffectingAccuracy;
-
-                        if (Settings.intellectualAffectsMortarAccuracy)
-                            compMannable.ManningPawn.skills.Learn(SkillDefOf.Intellectual, skillXP, false);
-                        if (Settings.shootingAffectsMortarAccuracy)
-                            compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
-                    }
+                        compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
                 }
             }
         }
