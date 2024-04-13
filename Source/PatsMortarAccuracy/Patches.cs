@@ -21,7 +21,7 @@ namespace MortarAccuracy
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
             //[HarmonyPrefix]
-            static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget)
+            static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, int ___lastShotTick)
             {
                 if (__instance.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
                 {
@@ -29,148 +29,137 @@ namespace MortarAccuracy
                     // Perform vanilla logic
                     return true;
                 }
-                else
+                if (___currentTarget.HasThing && ___currentTarget.Thing.Map != __instance.caster.Map)
                 {
-                    // Perform the same vanilla checks
-                    if (___currentTarget.HasThing && ___currentTarget.Thing.Map != __instance.caster.Map)
-                    {
-                        __result = false;
-                        return false;
-                    }
-                    ThingDef projectile = __instance.Projectile;
-                    if (projectile == null)
-                    {
-                        __result = false;
-                        return false;
-                    }
-                    ShootLine shootLine = default(ShootLine);
-                    Verb baseVerb = __instance as Verb;
-                    bool flag = baseVerb.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
-                    if (__instance.verbProps.stopBurstWithoutLos && !flag)
-                    {
-                        __result = false;
-                        return false;
-                    }
-
-                    // Vanilla checks pass, we can shoot
-                    if (baseVerb.EquipmentSource != null)
-                    {
-                        CompChangeableProjectile comp = baseVerb.EquipmentSource.GetComp<CompChangeableProjectile>();
-                        if (comp != null)
-                        {
-                            comp.Notify_ProjectileLaunched();
-                        }
-                        CompReloadable comp2 = baseVerb.EquipmentSource.GetComp<CompReloadable>();
-                        if (comp2 != null)
-                        {
-                            comp2.UsedOnce();
-                        }
-                    }
-
-                    Thing launcher = __instance.caster;
-                    Thing equipment = baseVerb.EquipmentSource;
-                    CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
-                    if (compMannable != null && compMannable.ManningPawn != null)
-                    {
-                        launcher = compMannable.ManningPawn;
-                        equipment = __instance.caster;
-                        // Earn skills
-                        GainSkills(__instance, compMannable);
-                    }
-
-                    Vector3 drawPos = __instance.caster.DrawPos;
-                    Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
-
-                    // If targetting a pawn
-                    if (Settings.targetLeading)
-                    {
-                        if (___currentTarget != null && ___currentTarget.Thing != null && ___currentTarget.Thing is Pawn targetPawn && targetPawn.pather.curPath != null)
-                        {
-                            List<IntVec3> nodes = new List<IntVec3>(targetPawn.pather.curPath.NodesReversed);
-                            nodes.Reverse();
-                            // Purge outdated nodes from list
-                            for (int i = 0; i < nodes.Count; i++)
-                            {
-                                if (nodes[i] == targetPawn.Position)
-                                {
-                                    // Remove all previous nodes
-                                    nodes.RemoveRange(0, i);
-                                    //Log.Message("Removed " + i + " entries. First node is now " + nodes[0].ToString());
-                                    break;
-                                }
-                            }
-                            // Path of target pawn from current to destination
-                            // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
-                            float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
-                            float projectileMoveSpeed = projectile.projectile.speed;
-
-                            // Estimate position target will be in after this amount of time
-                            IntVec3 bestTarget = targetPawn.Position;
-                            float bestTimeOffset = float.MaxValue;
-                            //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
-                            float accumulatedTargetTime = 0f;
-
-                            IntVec3 previousPosition = targetPawn.Position;
-                            foreach (IntVec3 pathPosition in nodes)
-                            {
-                                float projectileDistanceFromTarget = (pathPosition - __instance.caster.Position).LengthHorizontal;
-                                float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
-
-                                //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
-                                //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
-
-                                float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
-                                float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
-                                accumulatedTargetTime += timeForPawnToReachPositionFromLastPosition;
-
-                                float timeOffset = Mathf.Abs(timeForProjectileToReachPosition - accumulatedTargetTime);
-                                if (timeOffset < bestTimeOffset)
-                                {
-                                    bestTarget = pathPosition;
-                                    bestTimeOffset = timeOffset;
-                                    //Log.Message("Position " + pathPosition.ToString() + " is better. Time offset is " + timeOffset);
-                                }
-                                else
-                                {
-                                    //Log.Message("Position " + pathPosition.ToString() + " is not better. Time offset is " + timeOffset);
-                                }
-
-                                previousPosition = pathPosition;
-                            }
-                            //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
-                            ___currentTarget = new LocalTargetInfo(bestTarget);
-                        }
-                    }
-
-                    float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
-                    ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
-                    IntVec3 targetPosition = ___currentTarget.Cell;
-                    //if (adjustedForcedMissRadius > 0.5f)
-                    {
-                        if (MP.enabled)
-                        {
-                            Rand.PushState();
-                        }
-
-                        // Calculate random target position using a uniform distribution
-                        float randomCircleArea = Rand.Range(0, Mathf.PI * adjustedForcedMissRadius * adjustedForcedMissRadius);
-                        float radiusOfRandomCircle = Mathf.Sqrt(randomCircleArea / Mathf.PI);
-                        float randomAngle = Rand.Range(0, 2 * Mathf.PI);
-                        targetPosition = new IntVec3(
-                            (int)(targetPosition.x + radiusOfRandomCircle * Mathf.Cos(randomAngle)),
-                            targetPosition.y,
-                            (int)(targetPosition.z + radiusOfRandomCircle * Mathf.Sin(randomAngle))
-                            );
-
-                        if (MP.enabled)
-                        {
-                            Rand.PopState();
-                        }
-                    }
-
-                    //Log.Message("Final target is " + c.ToString());
-                    projectile2.Launch(launcher, drawPos, targetPosition, ___currentTarget, projectileHitFlags, false, equipment, null);
+                    __result = false;
+                    return false;
                 }
+                ThingDef projectile = __instance.Projectile;
+                if (projectile == null)
+                {
+                    __result = false;
+                    return false;
+                }
+                ShootLine shootLine;
+                bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine, false);
+                if (__instance.verbProps.stopBurstWithoutLos && !flag)
+                {
+                    __result = false;
+                    return false;
+                }
+                if (__instance.EquipmentSource != null)
+                {
+                    CompChangeableProjectile comp = __instance.EquipmentSource.GetComp<CompChangeableProjectile>();
+                    if (comp != null)
+                    {
+                        comp.Notify_ProjectileLaunched();
+                    }
+                    CompApparelVerbOwner_Charged comp2 = __instance.EquipmentSource.GetComp<CompApparelVerbOwner_Charged>();
+                    if (comp2 != null)
+                    {
+                        comp2.UsedOnce();
+                    }
+                }
+                ___lastShotTick = Find.TickManager.TicksGame;
+                Thing thing = __instance.caster;
+                Thing equipment = __instance.EquipmentSource;
+                CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
+                if (((compMannable != null) ? compMannable.ManningPawn : null) != null)
+                {
+                    thing = compMannable.ManningPawn;
+                    equipment = __instance.caster;
+                    // INSERT SKILL GAINING IF MORTAR
+                    GainSkills(__instance, compMannable);
+                }
+                Vector3 drawPos = __instance.caster.DrawPos;
+                Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
+                ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
+
+                // If targetting a pawn
+                // Assigns new ___currentTarget value
+                if (Settings.targetLeading)
+                {
+                    if (___currentTarget != null && ___currentTarget.Thing != null && ___currentTarget.Thing is Pawn targetPawn && targetPawn.pather.curPath != null)
+                    {
+                        List<IntVec3> nodes = new List<IntVec3>(targetPawn.pather.curPath.NodesReversed);
+                        nodes.Reverse();
+                        // Purge outdated nodes from list
+                        for (int i = 0; i < nodes.Count; i++)
+                        {
+                            if (nodes[i] == targetPawn.Position)
+                            {
+                                // Remove all previous nodes
+                                nodes.RemoveRange(0, i);
+                                //Log.Message("Removed " + i + " entries. First node is now " + nodes[0].ToString());
+                                break;
+                            }
+                        }
+                        // Path of target pawn from current to destination
+                        // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
+                        float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
+                        float projectileMoveSpeed = projectile.projectile.speed;
+
+                        // Estimate position target will be in after this amount of time
+                        IntVec3 bestTarget = targetPawn.Position;
+                        float bestTimeOffset = float.MaxValue;
+                        //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
+                        float accumulatedTargetTime = 0f;
+
+                        IntVec3 previousPosition = targetPawn.Position;
+                        foreach (IntVec3 pathPosition in nodes)
+                        {
+                            float projectileDistanceFromTarget = (pathPosition - __instance.caster.Position).LengthHorizontal;
+                            float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
+
+                            //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
+                            //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
+
+                            float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
+                            float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
+                            accumulatedTargetTime += timeForPawnToReachPositionFromLastPosition;
+
+                            float timeOffset = Mathf.Abs(timeForProjectileToReachPosition - accumulatedTargetTime);
+                            if (timeOffset < bestTimeOffset)
+                            {
+                                bestTarget = pathPosition;
+                                bestTimeOffset = timeOffset;
+                                //Log.Message("Position " + pathPosition.ToString() + " is better. Time offset is " + timeOffset);
+                            }
+                            else
+                            {
+                                //Log.Message("Position " + pathPosition.ToString() + " is not better. Time offset is " + timeOffset);
+                            }
+
+                            previousPosition = pathPosition;
+                        }
+                        //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
+                        ___currentTarget = new LocalTargetInfo(bestTarget);
+                    }
+                }
+                float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
+                IntVec3 targetPosition = ___currentTarget.Cell;
+
+                if (MP.enabled)
+                {
+                    Rand.PushState();
+                }
+
+                // Calculate random target position using a uniform distribution
+                float randomCircleArea = Rand.Range(0, Mathf.PI * adjustedForcedMissRadius * adjustedForcedMissRadius);
+                float radiusOfRandomCircle = Mathf.Sqrt(randomCircleArea / Mathf.PI);
+                float randomAngle = Rand.Range(0, 2 * Mathf.PI);
+                targetPosition = new IntVec3(
+                    (int)(targetPosition.x + radiusOfRandomCircle * Mathf.Cos(randomAngle)),
+                    targetPosition.y,
+                    (int)(targetPosition.z + radiusOfRandomCircle * Mathf.Sin(randomAngle))
+                    );
+
+                if (MP.enabled)
+                {
+                    Rand.PopState();
+                }
+
+                projectile2.Launch(thing, drawPos, targetPosition, ___currentTarget, projectileHitFlags, false, equipment, null);
                 __result = true;
                 return false;
             }
