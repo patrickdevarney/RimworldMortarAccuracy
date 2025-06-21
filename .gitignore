@@ -1,7 +1,7 @@
 .vs/
 /build
 /Source/packages
-/BUILT_BINARIES
+/BUILT BINARIES
 /bin
 /obj
 /Source/PatsMortarAccuracy/bin
