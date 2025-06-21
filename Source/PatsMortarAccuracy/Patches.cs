@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Verse;
 using HarmonyLib;
 using RimWorld;
@@ -53,7 +53,7 @@ namespace MortarAccuracy
                     {
                         comp.Notify_ProjectileLaunched();
                     }
-                    CompReloadable comp2 = __instance.EquipmentSource.GetComp<CompReloadable>();
+                    CompApparelVerbOwner_Charged comp2 = __instance.EquipmentSource.GetComp<CompApparelVerbOwner_Charged>();
                     if (comp2 != null)
                     {
                         comp2.UsedOnce();
