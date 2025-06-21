@@ -20,7 +20,6 @@ namespace MortarAccuracy
         [HarmonyBefore("com.yayo.combat")]
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
-            //[HarmonyPrefix]
             static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, int ___lastShotTick)
             {
                 if (__instance.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
@@ -41,7 +40,7 @@ namespace MortarAccuracy
                     return false;
                 }
                 ShootLine shootLine;
-                bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine, false);
+                bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
                 if (__instance.verbProps.stopBurstWithoutLos && !flag)
                 {
                     __result = false;
@@ -54,7 +53,7 @@ namespace MortarAccuracy
                     {
                         comp.Notify_ProjectileLaunched();
                     }
-                    CompApparelVerbOwner_Charged comp2 = __instance.EquipmentSource.GetComp<CompApparelVerbOwner_Charged>();
+                    CompReloadable comp2 = __instance.EquipmentSource.GetComp<CompReloadable>();
                     if (comp2 != null)
                     {
                         comp2.UsedOnce();
@@ -79,62 +78,7 @@ namespace MortarAccuracy
                 // Assigns new ___currentTarget value
                 if (Settings.targetLeading)
                 {
-                    if (___currentTarget != null && ___currentTarget.Thing != null && ___currentTarget.Thing is Pawn targetPawn && targetPawn.pather.curPath != null)
-                    {
-                        List<IntVec3> nodes = new List<IntVec3>(targetPawn.pather.curPath.NodesReversed);
-                        nodes.Reverse();
-                        // Purge outdated nodes from list
-                        for (int i = 0; i < nodes.Count; i++)
-                        {
-                            if (nodes[i] == targetPawn.Position)
-                            {
-                                // Remove all previous nodes
-                                nodes.RemoveRange(0, i);
-                                //Log.Message("Removed " + i + " entries. First node is now " + nodes[0].ToString());
-                                break;
-                            }
-                        }
-                        // Path of target pawn from current to destination
-                        // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
-                        float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
-                        float projectileMoveSpeed = projectile.projectile.speed;
-
-                        // Estimate position target will be in after this amount of time
-                        IntVec3 bestTarget = targetPawn.Position;
-                        float bestTimeOffset = float.MaxValue;
-                        //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
-                        float accumulatedTargetTime = 0f;
-
-                        IntVec3 previousPosition = targetPawn.Position;
-                        foreach (IntVec3 pathPosition in nodes)
-                        {
-                            float projectileDistanceFromTarget = (pathPosition - __instance.caster.Position).LengthHorizontal;
-                            float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
-
-                            //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
-                            //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
-
-                            float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
-                            float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
-                            accumulatedTargetTime += timeForPawnToReachPositionFromLastPosition;
-
-                            float timeOffset = Mathf.Abs(timeForProjectileToReachPosition - accumulatedTargetTime);
-                            if (timeOffset < bestTimeOffset)
-                            {
-                                bestTarget = pathPosition;
-                                bestTimeOffset = timeOffset;
-                                //Log.Message("Position " + pathPosition.ToString() + " is better. Time offset is " + timeOffset);
-                            }
-                            else
-                            {
-                                //Log.Message("Position " + pathPosition.ToString() + " is not better. Time offset is " + timeOffset);
-                            }
-
-                            previousPosition = pathPosition;
-                        }
-                        //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
-                        ___currentTarget = new LocalTargetInfo(bestTarget);
-                    }
+                    ___currentTarget = GetTargetWithLeading(___currentTarget, projectile, __instance);
                 }
                 float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
                 IntVec3 targetPosition = ___currentTarget.Cell;
@@ -164,6 +108,75 @@ namespace MortarAccuracy
                 return false;
             }
         }
+
+        static LocalTargetInfo GetTargetWithLeading(LocalTargetInfo ___currentTarget, ThingDef projectile, Verb_LaunchProjectile __instance)
+        {
+            if (___currentTarget == null || ___currentTarget.Thing == null)
+            {
+                return ___currentTarget;
+            }
+
+            if (!(___currentTarget.Thing is Pawn targetPawn) || targetPawn.pather.curPath == null)
+            {
+                return ___currentTarget;
+            }
+
+            List<IntVec3> nodes = new List<IntVec3>(targetPawn.pather.curPath.NodesReversed);
+            nodes.Reverse();
+            // Purge outdated nodes from list
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i] == targetPawn.Position)
+                {
+                    // Remove all previous nodes
+                    nodes.RemoveRange(0, i);
+                    //Log.Message("Removed " + i + " entries. First node is now " + nodes[0].ToString());
+                    break;
+                }
+            }
+            // Path of target pawn from current to destination
+            // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
+            Log.Error("current target is pawn. about to try to GetStatValue");
+            float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
+            float projectileMoveSpeed = projectile.projectile.speed;
+
+            // Estimate position target will be in after this amount of time
+            IntVec3 bestTarget = targetPawn.Position;
+            float bestTimeOffset = float.MaxValue;
+            //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
+            float accumulatedTargetTime = 0f;
+
+            IntVec3 previousPosition = targetPawn.Position;
+            foreach (IntVec3 pathPosition in nodes)
+            {
+                float projectileDistanceFromTarget = (pathPosition - __instance.caster.Position).LengthHorizontal;
+                float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
+
+                //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
+                //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
+
+                float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
+                float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
+                accumulatedTargetTime += timeForPawnToReachPositionFromLastPosition;
+
+                float timeOffset = Mathf.Abs(timeForProjectileToReachPosition - accumulatedTargetTime);
+                if (timeOffset < bestTimeOffset)
+                {
+                    bestTarget = pathPosition;
+                    bestTimeOffset = timeOffset;
+                    //Log.Message("Position " + pathPosition.ToString() + " is better. Time offset is " + timeOffset);
+                }
+                else
+                {
+                    //Log.Message("Position " + pathPosition.ToString() + " is not better. Time offset is " + timeOffset);
+                }
+
+                previousPosition = pathPosition;
+            }
+            //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
+            return new LocalTargetInfo(bestTarget);
+        }
+
 
         [HarmonyPatch(typeof(Verb), "DrawHighlightFieldRadiusAroundTarget")]
         static class Harmony_Verb_DrawHighlightFieldRadiusAroundTarget
@@ -222,7 +235,7 @@ namespace MortarAccuracy
             }
             else
             {
-                Pawn shooterPawn = null;
+                Pawn shooterPawn;
                 CompMannable compMannable = shootVerb.caster.TryGetComp<CompMannable>();
                 if (compMannable != null && compMannable.ManningPawn != null)
                 {
@@ -263,7 +276,7 @@ namespace MortarAccuracy
                 if (Settings.weatherAffectsMortarAccuracy)
                     missRadiusForShot = (missRadiusForShot * skillMultiplier) + ((1 - shootVerb.caster.Map.weatherManager.CurWeatherAccuracyMultiplier) * missRadiusForShot);
                 else
-                    missRadiusForShot = (missRadiusForShot * skillMultiplier);
+                    missRadiusForShot *= skillMultiplier;
                 // TODO: this is wrong. __curentTarget.Cell is origin when we are hovering over it, preview is incorrect
                 return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
             }
