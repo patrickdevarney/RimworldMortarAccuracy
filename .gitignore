@@ -1,4 +1,8 @@
 .vs/
 /build
 /Source/packages
+/BUILT_BINARIES
+/bin
+/obj
+/Source/PatsMortarAccuracy/bin
 /Source/PatsMortarAccuracy/obj
