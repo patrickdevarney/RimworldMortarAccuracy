@@ -1,9 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 using Verse;
 using HarmonyLib;
 using RimWorld;
-using Multiplayer.API;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
+using System;
+using System.Linq;
 
 namespace MortarAccuracy
 {
@@ -17,95 +20,145 @@ namespace MortarAccuracy
         }
 
         [HarmonyPatch(typeof(Verb_LaunchProjectile), "TryCastShot")]
-        [HarmonyBefore("com.yayo.combat")]
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
-            static bool Prefix(ref bool __result, Verb_LaunchProjectile __instance, LocalTargetInfo ___currentTarget, int ___lastShotTick)
+            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator il)
             {
-                if (__instance.verbProps.ForcedMissRadius < 0.5f || __instance.verbProps.requireLineOfSight)
+                var codes = new List<CodeInstruction>(instructions);
+                
+                // Helper to get local index from operand
+                int? GetLocalIndex(object operand)
                 {
-                    // Assuming this is not a mortar-like thing
-                    // Perform vanilla logic
-                    return true;
+                    if (operand is int i)
+                        return i;
+                    if (operand is LocalBuilder lb)
+                        return lb.LocalIndex;
+                    return null;
                 }
-                if (___currentTarget.HasThing && ___currentTarget.Thing.Map != __instance.caster.Map)
+
+                // Find the projectile local variable (from castclass Verse.Projectile + stloc)
+                int projectileLocalIndex = -1;
+                for (int i = 0; i < codes.Count - 1; i++)
                 {
-                    __result = false;
-                    return false;
-                }
-                ThingDef projectile = __instance.Projectile;
-                if (projectile == null)
-                {
-                    __result = false;
-                    return false;
-                }
-                ShootLine shootLine;
-                bool flag = __instance.TryFindShootLineFromTo(__instance.caster.Position, ___currentTarget, out shootLine);
-                if (__instance.verbProps.stopBurstWithoutLos && !flag)
-                {
-                    __result = false;
-                    return false;
-                }
-                if (__instance.EquipmentSource != null)
-                {
-                    CompChangeableProjectile comp = __instance.EquipmentSource.GetComp<CompChangeableProjectile>();
-                    if (comp != null)
+                    if (codes[i].opcode == OpCodes.Castclass &&
+                        codes[i].operand is Type t && t == typeof(Projectile) &&
+                        (codes[i + 1].opcode == OpCodes.Stloc || codes[i + 1].opcode == OpCodes.Stloc_S))
                     {
-                        comp.Notify_ProjectileLaunched();
-                    }
-                    CompApparelVerbOwner_Charged comp2 = __instance.EquipmentSource.GetComp<CompApparelVerbOwner_Charged>();
-                    if (comp2 != null)
-                    {
-                        comp2.UsedOnce();
+                        var localIndex = GetLocalIndex(codes[i + 1].operand);
+                        if (localIndex != null)
+                        {
+                            projectileLocalIndex = localIndex.Value;
+                            break;
+                        }
                     }
                 }
-                ___lastShotTick = Find.TickManager.TicksGame;
-                Thing thing = __instance.caster;
-                Thing equipment = __instance.EquipmentSource;
-                CompMannable compMannable = __instance.caster.TryGetComp<CompMannable>();
-                if (((compMannable != null) ? compMannable.ManningPawn : null) != null)
+                
+                // Find the location where we need to insert our custom logic
+                for (int i = 0; i < codes.Count - 4; i++)
                 {
-                    thing = compMannable.ManningPawn;
-                    equipment = __instance.caster;
-                    // INSERT SKILL GAINING IF MORTAR
-                    GainSkills(__instance, compMannable);
+                    if (codes[i].opcode == OpCodes.Ldarg_0 &&
+                        codes[i + 1].opcode == OpCodes.Ldfld && 
+                        codes[i + 1].operand is FieldInfo fieldInfo && 
+                        fieldInfo.Name == "verbProps" &&
+                        codes[i + 2].opcode == OpCodes.Callvirt &&
+                        codes[i + 2].operand is MethodInfo methodInfo &&
+                        methodInfo.Name == "get_ForcedMissRadius" &&
+                        codes[i + 3].opcode == OpCodes.Ldc_R4 &&
+                        (float)codes[i + 3].operand == 0.5f &&
+                        codes[i + 4].opcode == OpCodes.Ble_Un)
+                    {
+                        var insertIndex = i + 5;
+                        var skipToOriginal = il.DefineLabel();
+                        var compMannableLocal = il.DeclareLocal(typeof(CompMannable));
+                        var injected = new List<CodeInstruction>
+                        {
+                            new CodeInstruction(OpCodes.Ldarg_0),
+                            new CodeInstruction(OpCodes.Ldfld, typeof(Verse.Verb).GetField("caster", BindingFlags.Public | BindingFlags.Instance)),
+                            new CodeInstruction(OpCodes.Call, typeof(ThingCompUtility).GetMethod("TryGetComp", new System.Type[] { typeof(Thing) }).MakeGenericMethod(typeof(CompMannable))),
+                            new CodeInstruction(OpCodes.Stloc, compMannableLocal),
+                            new CodeInstruction(OpCodes.Ldloc, compMannableLocal),
+                            new CodeInstruction(OpCodes.Brfalse, skipToOriginal),
+                            new CodeInstruction(OpCodes.Ldloc, compMannableLocal),
+                            new CodeInstruction(OpCodes.Callvirt, typeof(CompMannable).GetProperty("ManningPawn").GetGetMethod()),
+                            new CodeInstruction(OpCodes.Brfalse, skipToOriginal),
+                            new CodeInstruction(OpCodes.Ldarg_0),
+                            new CodeInstruction(OpCodes.Ldloc, compMannableLocal),
+                            new CodeInstruction(OpCodes.Call, typeof(Patches).GetMethod("GainSkills", BindingFlags.NonPublic | BindingFlags.Static)),
+                        };
+                        // Only inject if we found the projectile local
+                        if (projectileLocalIndex != -1)
+                        {
+                            injected.Add(new CodeInstruction(OpCodes.Ldarg_0));
+                            injected.Add(new CodeInstruction(OpCodes.Ldloc, projectileLocalIndex));
+                            injected.Add(new CodeInstruction(OpCodes.Call, typeof(Patches).GetMethod("ApplyTargetLeadingIfEnabled", BindingFlags.NonPublic | BindingFlags.Static)));
+                        }
+                        injected.Add(new CodeInstruction(OpCodes.Nop) { labels = new List<Label> { skipToOriginal } });
+                        codes.InsertRange(insertIndex, injected);
+                        break;
+                    }
                 }
-                Vector3 drawPos = __instance.caster.DrawPos;
-                Projectile projectile2 = (Projectile)GenSpawn.Spawn(projectile, shootLine.Source, __instance.caster.Map, WipeMode.Vanish);
-                ProjectileHitFlags projectileHitFlags = ProjectileHitFlags.All;
-
-                // If targetting a pawn
-                // Assigns new ___currentTarget value
-                if (Settings.targetLeading)
+                
+                // Now find where num2 is calculated and modify it after assignment
+                for (int i = 0; i < codes.Count - 1; i++)
                 {
-                    ___currentTarget = GetTargetWithLeading(___currentTarget, projectile, __instance);
+                    // Look for the CalculateAdjustedForcedMiss call
+                    if (codes[i].opcode == OpCodes.Call &&
+                        codes[i].operand is MethodInfo methodInfo &&
+                        methodInfo.Name == "CalculateAdjustedForcedMiss" &&
+                        methodInfo.DeclaringType == typeof(VerbUtility))
+                    {
+                        // Find the stloc instruction that follows (might not be immediate)
+                        int stlocIndex = -1;
+                        for (int j = i + 1; j < codes.Count; j++)
+                        {
+                            if (codes[j].opcode == OpCodes.Stloc || codes[j].opcode == OpCodes.Stloc_S)
+                            {
+                                stlocIndex = j;
+                                break;
+                            }
+                        }
+                        
+                        if (stlocIndex != -1)
+                        {
+                            var insertIndex = stlocIndex + 1;
+                            
+                            // Store the operand safely
+                            var stlocOperand = codes[stlocIndex].operand;
+                            if (stlocOperand == null)
+                            {
+                                break;
+                            }
+                            
+                            // Only move labels if insertIndex is within bounds
+                            List<Label> nextLabels = null;
+                            if (insertIndex < codes.Count)
+                            {
+                                nextLabels = codes[insertIndex].labels;
+                                codes[insertIndex].labels = new List<Label>(); // Clear them
+                            }
+
+                            var newInstructions = new List<CodeInstruction>
+                            {
+                                //new CodeInstruction(OpCodes.Ldloc, stlocOperand),
+                                new CodeInstruction(OpCodes.Ldarg_0),
+                                new CodeInstruction(OpCodes.Ldarg_0),
+                                new CodeInstruction(OpCodes.Ldfld, typeof(Verse.Verb).GetField("currentTarget", BindingFlags.NonPublic | BindingFlags.Instance)),
+                                new CodeInstruction(OpCodes.Call, typeof(Patches).GetMethod("GetAdjustedForcedMissRadius", BindingFlags.NonPublic | BindingFlags.Static)),
+                                new CodeInstruction(OpCodes.Stloc, stlocOperand)
+                            };
+
+                            // Move labels to the first new instruction
+                            if (nextLabels != null && nextLabels.Count > 0)
+                                newInstructions[0].labels.AddRange(nextLabels);
+
+                            codes.InsertRange(insertIndex, newInstructions);
+                        }
+
+                        break;
+                    }
                 }
-                float adjustedForcedMissRadius = GetAdjustedForcedMissRadius(__instance, ___currentTarget);
-                IntVec3 targetPosition = ___currentTarget.Cell;
-
-                if (MP.enabled)
-                {
-                    Rand.PushState();
-                }
-
-                // Calculate random target position using a uniform distribution
-                float randomCircleArea = Rand.Range(0, Mathf.PI * adjustedForcedMissRadius * adjustedForcedMissRadius);
-                float radiusOfRandomCircle = Mathf.Sqrt(randomCircleArea / Mathf.PI);
-                float randomAngle = Rand.Range(0, 2 * Mathf.PI);
-                targetPosition = new IntVec3(
-                    (int)(targetPosition.x + radiusOfRandomCircle * Mathf.Cos(randomAngle)),
-                    targetPosition.y,
-                    (int)(targetPosition.z + radiusOfRandomCircle * Mathf.Sin(randomAngle))
-                    );
-
-                if (MP.enabled)
-                {
-                    Rand.PopState();
-                }
-
-                projectile2.Launch(thing, drawPos, targetPosition, ___currentTarget, projectileHitFlags, false, equipment, null);
-                __result = true;
-                return false;
+                
+                return codes;
             }
         }
 
@@ -136,24 +189,18 @@ namespace MortarAccuracy
             }
             // Path of target pawn from current to destination
             // Need travel speed of pawn, estimate Vec3 they will be in based on travel speed of our projectile
-            Log.Error("current target is pawn. about to try to GetStatValue");
             float targetMoveSpeed = targetPawn.GetStatValue(StatDefOf.MoveSpeed);
             float projectileMoveSpeed = projectile.projectile.speed;
-
             // Estimate position target will be in after this amount of time
             IntVec3 bestTarget = targetPawn.Position;
             float bestTimeOffset = float.MaxValue;
             //Log.Message("Default time offset = " + Mathf.Abs(((targetPawn.Position - caster.Position).LengthHorizontal) / projectileMoveSpeed));
             float accumulatedTargetTime = 0f;
-
             IntVec3 previousPosition = targetPawn.Position;
             foreach (IntVec3 pathPosition in nodes)
             {
                 float projectileDistanceFromTarget = (pathPosition - __instance.caster.Position).LengthHorizontal;
                 float timeForProjectileToReachPosition = projectileDistanceFromTarget / projectileMoveSpeed;
-
-                //float pawnDistanceFromTarget = (pathPosition - targetPawn.Position).LengthHorizontal;
-                //float timeForPawnToReachPosition = pawnDistanceFromTarget / targetMoveSpeed;
 
                 float pawnDistanceFromLastPositionToHere = (pathPosition - previousPosition).LengthHorizontal;
                 float timeForPawnToReachPositionFromLastPosition = pawnDistanceFromLastPositionToHere / targetMoveSpeed;
@@ -284,7 +331,6 @@ namespace MortarAccuracy
 
         static void GainSkills(Verb_LaunchProjectile shootVerb, CompMannable compMannable)
         {
-            // Earn skills
             if (compMannable.ManningPawn.skills != null)
             {
                 int skillsAffectingAccuracy = 0;
@@ -304,6 +350,17 @@ namespace MortarAccuracy
                     if (Settings.shootingAffectsMortarAccuracy)
                         compMannable.ManningPawn.skills.Learn(SkillDefOf.Shooting, skillXP, false);
                 }
+            }
+        }
+
+        static void ApplyTargetLeadingIfEnabled(Verb_LaunchProjectile shootVerb, Projectile projectile)
+        {
+            if (Settings.targetLeading)
+            {
+                var currentTargetField = typeof(Verb_LaunchProjectile).GetField("currentTarget", BindingFlags.NonPublic | BindingFlags.Instance);
+                var currentTarget = (LocalTargetInfo)currentTargetField.GetValue(shootVerb);
+                var newTarget = GetTargetWithLeading(currentTarget, projectile.def, shootVerb);
+                currentTargetField.SetValue(shootVerb, newTarget);
             }
         }
     }
