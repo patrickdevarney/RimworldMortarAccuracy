@@ -11,7 +11,7 @@
 	<Improved>mejorada</Improved>
 	<Reduced>reducida</Reduced>
 	<OptionShowAccuracy>Mostrar radio de precisión en lugar de radio de explosión</OptionShowAccuracy>
-	
+	<OptionShowExplosionRadius>Mostrar radio de explosión</OptionShowExplosionRadius>
 	<OptionCover>Las coberturas reducen la precisión</OptionCover>
 	<OptionLeadTarget>Permitir que los colonos marquen sus objetivos</OptionLeadTarget>
     <OptionTargetLeading>Marcar automáticamente a los objetivos en movimiento</OptionTargetLeading>

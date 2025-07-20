@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using Verse;
 using HarmonyLib;
 using RimWorld;
@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System;
-using System.Linq;
 
 namespace MortarAccuracy
 {
@@ -15,8 +14,16 @@ namespace MortarAccuracy
     {
         static Patches()
         {
+            //Harmony.DEBUG = true;
+            //LogModError("REMEMBER TO TURN OFF DEBUG");
+
             var harmony = new Harmony("rimworld.hobtook.mortaraccuracy");
             harmony.PatchAll();
+        }
+
+        static void LogModError(string message)
+        {
+            Log.Error($"MortarAccuracy: Error during patching. Please post on Steam Workshop. {message}");
         }
 
         [HarmonyPatch(typeof(Verb_LaunchProjectile), "TryCastShot")]
@@ -97,7 +104,7 @@ namespace MortarAccuracy
                         break;
                     }
                 }
-                
+
                 // Now find where num2 is calculated and modify it after assignment
                 for (int i = 0; i < codes.Count - 1; i++)
                 {
@@ -107,57 +114,116 @@ namespace MortarAccuracy
                         methodInfo.Name == "CalculateAdjustedForcedMiss" &&
                         methodInfo.DeclaringType == typeof(VerbUtility))
                     {
-                        // Find the stloc instruction that follows (might not be immediate)
-                        int stlocIndex = -1;
+                        // Find the stloc instruction so we know what local var to assign to
+                        int currentIndex = -1;
                         for (int j = i + 1; j < codes.Count; j++)
                         {
                             if (codes[j].opcode == OpCodes.Stloc || codes[j].opcode == OpCodes.Stloc_S)
                             {
-                                stlocIndex = j;
+                                currentIndex = j;
                                 break;
                             }
                         }
-                        
-                        if (stlocIndex != -1)
-                        {
-                            var insertIndex = stlocIndex + 1;
-                            
-                            // Store the operand safely
-                            var stlocOperand = codes[stlocIndex].operand;
-                            if (stlocOperand == null)
-                            {
-                                break;
-                            }
-                            
-                            // Only move labels if insertIndex is within bounds
-                            List<Label> nextLabels = null;
-                            if (insertIndex < codes.Count)
-                            {
-                                nextLabels = codes[insertIndex].labels;
-                                codes[insertIndex].labels = new List<Label>(); // Clear them
-                            }
 
-                            var newInstructions = new List<CodeInstruction>
+                        if (currentIndex == -1)
+                        {
+                            LogModError("Failed to find CalculateAdjustedForcedMiss index");
+                            break;
+                        }
+
+                        // Store the operand safely
+                        var stlocOperand = codes[currentIndex].operand;
+                        if (stlocOperand == null)
+                        {
+                            LogModError("stlocOperand is null");
+                            break;
+                        }
+
+                        int insertIndex = currentIndex + 1;
+                        var newInstructions = new List<CodeInstruction>
                             {
-                                //new CodeInstruction(OpCodes.Ldloc, stlocOperand),
                                 new CodeInstruction(OpCodes.Ldarg_0),
                                 new CodeInstruction(OpCodes.Ldarg_0),
                                 new CodeInstruction(OpCodes.Ldfld, typeof(Verse.Verb).GetField("currentTarget", BindingFlags.NonPublic | BindingFlags.Instance)),
                                 new CodeInstruction(OpCodes.Call, typeof(Patches).GetMethod("GetAdjustedForcedMissRadius", BindingFlags.NonPublic | BindingFlags.Static)),
-                                new CodeInstruction(OpCodes.Stloc, stlocOperand)
+                                new CodeInstruction(OpCodes.Stloc_S, stlocOperand),
                             };
+                        codes.InsertRange(insertIndex, newInstructions);
+                        currentIndex = insertIndex + newInstructions.Count;
 
-                            // Move labels to the first new instruction
-                            if (nextLabels != null && nextLabels.Count > 0)
-                                newInstructions[0].labels.AddRange(nextLabels);
-
-                            codes.InsertRange(insertIndex, newInstructions);
+                        // Replace (num2 > 0.5f) check that prevents perfect or lucky accuracy
+                        int removalIndex = -1;
+                        object jumpTarget = null;
+                        List<Label> labelsToPreserve = null;
+                        for (int j = currentIndex; j < codes.Count; j++)
+                        {
+                            if (codes[j].opcode == OpCodes.Ldc_R4 &&
+                                codes[j + 1].opcode == OpCodes.Ble_Un_S)
+                            {
+                                jumpTarget = codes[j + 1].operand;
+                                labelsToPreserve = codes[j + 1].labels;
+                                removalIndex = j - 1;
+                                break;
+                            }
                         }
 
+                        if (removalIndex == -1)
+                        {
+                            LogModError("Failed to find removalIndex for 0.5 comparison");
+                            break;
+                        }
+
+                        codes.RemoveRange(removalIndex, 3);
+                        var newComparison = new CodeInstruction(OpCodes.Brfalse_S, jumpTarget);
+                        foreach (var label in labelsToPreserve)
+                            newComparison.labels.Add(label);
+
+                        newInstructions = new List<CodeInstruction>
+                        {
+                            new CodeInstruction(OpCodes.Ldc_I4_1),
+                            newComparison,
+                        };
+                        codes.InsertRange(removalIndex, newInstructions);
+
+                        // Replace check (if forcedMissTarget != this.currentTarget.Cell) that prevents perfect or lucky accuracy with if(true)
+                        currentIndex = removalIndex + newInstructions.Count;
+                        removalIndex = -1;
+                        jumpTarget = null;
+                        labelsToPreserve = null;
+                        for (int j = currentIndex; j < codes.Count; j++)
+                        {
+                            if (codes[j].opcode == OpCodes.Brfalse_S)
+                            {
+                                jumpTarget = codes[j].operand;
+                                labelsToPreserve = codes[j].labels;
+                                removalIndex = j - 5;
+                                break;
+                            }
+                        }
+
+                        if (removalIndex == -1)
+                        {
+                            LogModError("Failed to find removalIndex");
+                            break;
+                        }
+
+                        codes.RemoveRange(removalIndex, 5);
+
+                        newInstructions = new List<CodeInstruction>()
+                        {
+                            new CodeInstruction(OpCodes.Ldc_I4_1),
+                        };
+                        codes.InsertRange(removalIndex, newInstructions);
+
+                        newComparison = new CodeInstruction(OpCodes.Brfalse_S, jumpTarget);
+                        foreach(var label in labelsToPreserve)
+                            newComparison.labels.Add(label);
+
+                        codes[removalIndex + newInstructions.Count] = newComparison;
                         break;
                     }
                 }
-                
+
                 return codes;
             }
         }
@@ -325,7 +391,8 @@ namespace MortarAccuracy
                 else
                     missRadiusForShot *= skillMultiplier;
                 // TODO: this is wrong. __curentTarget.Cell is origin when we are hovering over it, preview is incorrect
-                return VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
+                var retVal = VerbUtility.CalculateAdjustedForcedMiss(missRadiusForShot, ___currentTarget.Cell - shootVerb.caster.Position);
+                return retVal;
             }
         }
 
