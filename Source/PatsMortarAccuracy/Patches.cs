@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System;
+using System.Linq;
 
 namespace MortarAccuracy
 {
@@ -19,6 +20,60 @@ namespace MortarAccuracy
 
             var harmony = new Harmony("rimworld.hobtook.mortaraccuracy");
             harmony.PatchAll();
+
+            if (IsYayoCombatActive())
+            {
+                PatchMod_YayoCombat(harmony);
+            }
+        }
+
+        static bool IsYayoCombatActive()
+        {
+            return LoadedModManager.RunningMods
+                .Any(mod => mod.assemblies.loadedAssemblies
+                .Any(asm => asm.GetName().Name.ToLower() == "yayocombat"));
+        }
+
+        static bool SkipYayoPrefix = false;
+
+        static void PatchMod_YayoCombat(Harmony harmony)
+        {
+            MethodInfo yayoPrefix = AccessTools.Method("yayoCombat.HarmonyPatches.Verb_LaunchProjectile_TryCastShot:Prefix");
+            try
+            {
+                if (yayoPrefix != null)
+                {
+                    /*  Final execution here is a bit funky.
+                     *  Prefix_TryCastShot_BeforeYayo determines if we skip or allow yayo's TryCastShot:Prefix
+                     *  Prefix_YayoCombat_TryCastShotPrefix executes skipping yayo combat or not
+                     *  Yayo TryCastShot:Prefix may get skipped or execute
+                     *      if yayo prefix return false > Original TryCastShot skipped
+                     *      else yayo prefix return true > Original TryCastShot runs
+                     */
+
+                    // Patch of original TryCastShot, before yayo combat prefix. Determines if we want to skip yayo combat prefix
+                    var original = AccessTools.Method(typeof(Verb_LaunchProjectile), "TryCastShot");
+                    var prefix = typeof(Patches).GetMethod(nameof(Patches.Prefix_TryCastShot_BeforeYayo), BindingFlags.Static | BindingFlags.Public);
+
+                    var prefixMethod = new HarmonyMethod(prefix)
+                    {
+                        priority = Priority.First
+                    };
+
+                    harmony.Patch(original, prefix: prefixMethod);
+
+                    // Patch of yayo combat TryCastShot prefix itself. Executes skipping yayo combat prefix
+                    harmony.Patch(yayoPrefix, prefix: new HarmonyMethod(typeof(Patches), nameof(Prefix_YayoCombat_TryCastShotPrefix)));
+                }
+                else
+                {
+                    LogModError("Detected YayoCombat is enabled, but was unable to find the YayoCombat TryCastShot:Prefix. The game still works, but YayoCombat is preventing MortarAccuracy from running");
+                }
+            }
+            catch
+            {
+                LogModError("Detected YayoCombat is enabled, but was unable to patch YayoCombat. The game still works, but YayoCombat is preventing MortarAccuracy from running");
+            }
         }
 
         static void LogModError(string message)
@@ -26,10 +81,34 @@ namespace MortarAccuracy
             Log.Error($"MortarAccuracy: Error during patching. Please post on Steam Workshop. {message}");
         }
 
+        public static bool Prefix_YayoCombat_TryCastShotPrefix(ref bool __result)
+        {
+            if (SkipYayoPrefix)
+            {
+                __result = true;
+                return false; // skip yayo
+            }
+            return true; // continue execution
+        }
+
+        public static bool Prefix_TryCastShot_BeforeYayo(Verb_LaunchProjectile __instance)
+        {
+            if (__instance.verbProps.ForcedMissRadius > 0.5f)
+            {
+                SkipYayoPrefix = true;
+            }
+            else
+            {
+                SkipYayoPrefix = false;
+            }
+
+            return true; // continue execution
+        }
+
         [HarmonyPatch(typeof(Verb_LaunchProjectile), "TryCastShot")]
         static class Harmony_Verb_LaunchProjectile_TryCastShot
         {
-            static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator il)
+            static IEnumerable<CodeInstruction> Transpiler  (IEnumerable<CodeInstruction> instructions, ILGenerator il)
             {
                 var codes = new List<CodeInstruction>(instructions);
                 
@@ -289,7 +368,6 @@ namespace MortarAccuracy
             //Log.Message("Initial target cell = " + currentTarget.Cell.ToString() + " and new target is " + bestTarget.ToString());
             return new LocalTargetInfo(bestTarget);
         }
-
 
         [HarmonyPatch(typeof(Verb), "DrawHighlightFieldRadiusAroundTarget")]
         static class Harmony_Verb_DrawHighlightFieldRadiusAroundTarget

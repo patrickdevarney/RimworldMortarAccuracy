@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Manifest>
     <identifier>MortarAccuracy</identifier>
-    <packageId>hobtook.mortaraccuracy</packageId>
-    <version>1.6.0</version>
+    <version>1.6</version>
     <incompatibleWith>
 		<li>1631756268</li><!-- Combat Extended -->
     </incompatibleWith>
