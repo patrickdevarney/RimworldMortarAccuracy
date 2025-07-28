@@ -12,7 +12,7 @@
 		<li>1.6</li>
 	</supportedVersions>
 	<packageId>hobtook.mortaraccuracy</packageId>
-<description>A collection of changes and options to make mortar accuracy better/worse, instead of having a fixed spread radius of 13 tiles.
+<description>A collection of changes and options to make mortar accuracy better/worse.
 
 -Accuracy is affected by a colonist's Intellectual and/or Shooting skills
 -Automatically lead moving targets
@@ -23,7 +23,7 @@
 This affects all mortar shots, including enemy mortars.
 
 Supports other mods:
-In general, any added mortars are supported (artillery, catapults, ballistas, etc.). Technically anything using the verb Verb_Shoot and has a force miss radius is assumed to be a mortar and is affected by this mod.
+In general, any added mortars are supported (artillery, catapults, ballistas, etc.). 
 
 Load order does not matter in order to affect modded mortars.
 </description>
@@ -62,5 +62,15 @@ Load order does not matter in order to affect modded mortars.
 		</li>
 	</v1.6>
 </modDependenciesByVersion>
+
+<loadAfterByVersion>
+  <v1.6>
+    <li>Mlie.YayosCombat3</li>
+  </v1.6>
+</loadAfterByVersion>
+
+<incompatibleWith>
+  <li>CETeam.CombatExtended</li>
+</incompatibleWith>
 
 </ModMetaData>
