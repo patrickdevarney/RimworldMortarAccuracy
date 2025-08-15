@@ -454,6 +454,11 @@ namespace MortarAccuracy
                         totalSkill += shooterPawn.skills.GetSkill(SkillDefOf.Shooting).Level;
                         skillsTotaled++;
                     }
+                    if (Settings.bestSkillAffectsMotarAccuracy)
+                    {
+                        totalSkill = Math.Max(shooterPawn.skills.GetSkill(SkillDefOf.Intellectual).Level, shooterPawn.skills.GetSkill(SkillDefOf.Shooting).Level);
+                        skillsTotaled = 1;
+                    }
                     if (skillsTotaled > 0)
                     {
                         // get average skill
