@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using Verse;
 
 namespace MortarAccuracy
@@ -43,12 +44,12 @@ namespace MortarAccuracy
             listingStandard.CheckboxLabeled(Translator.Translate("OptionSkillIntellectual"), ref Settings.intellectualAffectsMortarAccuracy);
             listingStandard.CheckboxLabeled(Translator.Translate("OptionSkillShooting"), ref Settings.shootingAffectsMortarAccuracy);
 
-            listingStandard.Label(TranslatorFormattedStringExtensions.Translate("OptionBestAccuracy", (int)(Settings.maxSkillSpreadReduction * 100)));
-            Settings.maxSkillSpreadReduction = listingStandard.Slider(Settings.maxSkillSpreadReduction, 0f, 1f);
+            listingStandard.Label(TranslatorFormattedStringExtensions.Translate("OptionBestAccuracy", (int)Math.Round(Settings.maxSkillSpreadReduction * 100f)));
+            Settings.maxSkillSpreadReduction = (float)(Math.Round(listingStandard.Slider(Settings.maxSkillSpreadReduction, 0f, 1f) * 100d) / 100f);
 
             string modifierString = Settings.minSkillSpreadReduction < 0 ? Translator.Translate("Reduced") : Translator.Translate("Improved");
-            listingStandard.Label(TranslatorFormattedStringExtensions.Translate("OptionWorstAccuracy", modifierString, (int)(Settings.minSkillSpreadReduction * 100)));
-            Settings.minSkillSpreadReduction = listingStandard.Slider(Settings.minSkillSpreadReduction, -1f, 1f);
+            listingStandard.Label(TranslatorFormattedStringExtensions.Translate("OptionWorstAccuracy", modifierString, (int)Math.Round(Settings.minSkillSpreadReduction * 100f)));
+            Settings.minSkillSpreadReduction = (float)(Math.Round(listingStandard.Slider(Settings.minSkillSpreadReduction, -1f, 1f) * 100d) / 100f);
 
             if (Settings.minSkillSpreadReduction > Settings.maxSkillSpreadReduction)
                 Settings.minSkillSpreadReduction = Settings.maxSkillSpreadReduction;
