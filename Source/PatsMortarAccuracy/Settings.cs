@@ -7,6 +7,7 @@ namespace MortarAccuracy
     {
         public static bool intellectualAffectsMortarAccuracy = true;
         public static bool shootingAffectsMortarAccuracy = false;
+        public static bool bestSkillAffectsMotarAccuracy = false;
         public static bool weatherAffectsMortarAccuracy = true;
         public static float maxSkillSpreadReduction = 0.75f;
         public static float minSkillSpreadReduction = -0.4f;
@@ -17,6 +18,7 @@ namespace MortarAccuracy
         {
             Scribe_Values.Look(ref intellectualAffectsMortarAccuracy, "intellectualAffectsMortarAccuracy", true);
             Scribe_Values.Look(ref shootingAffectsMortarAccuracy, "shootingAffectsMortarAccuracy", false);
+            Scribe_Values.Look(ref bestSkillAffectsMotarAccuracy, "bestSkillAffectsMortarAccuracy", false);
             Scribe_Values.Look(ref weatherAffectsMortarAccuracy, "weatherAffectsMortarAccuracy", true);
             Scribe_Values.Look(ref showExplosionRadius, "showExplosionRadius", true);
             Scribe_Values.Look(ref maxSkillSpreadReduction, "maxSkillSpreadReduction", 0.75f);
@@ -42,6 +44,11 @@ namespace MortarAccuracy
             listingStandard.Label(Translator.Translate("OptionSkills"));
             listingStandard.CheckboxLabeled(Translator.Translate("OptionSkillIntellectual"), ref Settings.intellectualAffectsMortarAccuracy);
             listingStandard.CheckboxLabeled(Translator.Translate("OptionSkillShooting"), ref Settings.shootingAffectsMortarAccuracy);
+            
+            if (Settings.intellectualAffectsMortarAccuracy && Settings.shootingAffectsMortarAccuracy)
+                listingStandard.CheckboxLabeled(Translator.Translate("OptionSkillsBest"), ref Settings.bestSkillAffectsMotarAccuracy, Translator.Translate("OptionSkillsBestTooltip"));
+            else
+                Settings.bestSkillAffectsMotarAccuracy = false;
 
             listingStandard.Label(TranslatorFormattedStringExtensions.Translate("OptionBestAccuracy", (int)(Settings.maxSkillSpreadReduction * 100)));
             Settings.maxSkillSpreadReduction = listingStandard.Slider(Settings.maxSkillSpreadReduction, 0f, 1f);
